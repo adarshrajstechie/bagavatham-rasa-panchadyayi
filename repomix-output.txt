@@ -1,0 +1,1079 @@
+This file is a merged representation of a subset of the codebase, containing files not matching ignore patterns, combined into a single document by Repomix.
+
+<file_summary>
+This section contains a summary of this file.
+
+<purpose>
+This file contains a packed representation of a subset of the repository's contents that is considered the most important context.
+It is designed to be easily consumable by AI systems for analysis, code review,
+or other automated processes.
+</purpose>
+
+<file_format>
+The content is organized as follows:
+1. This summary section
+2. Repository information
+3. Directory structure
+4. Repository files (if enabled)
+5. Multiple file entries, each consisting of:
+  - File path as an attribute
+  - Full contents of the file
+</file_format>
+
+<usage_guidelines>
+- This file should be treated as read-only. Any changes should be made to the
+  original repository files, not this packed version.
+- When processing this file, use the file path to distinguish
+  between different files in the repository.
+- Be aware that this file may contain sensitive information. Handle it with
+  the same level of security as you would the original repository.
+</usage_guidelines>
+
+<notes>
+- Some files may have been excluded based on .gitignore rules and Repomix's configuration
+- Binary files are not included in this packed representation. Please refer to the Repository Structure section for a complete list of file paths, including binary files
+- Files matching these patterns are excluded: **/node_modules/**, **/.next/**, **/dist/**, **/build/**, **/*.lock, **/package-lock.json, **/pnpm-lock.yaml
+- Files are sorted by Git change count (files with more changes are at the bottom)
+</notes>
+
+</file_summary>
+
+<directory_structure>
+public/
+  site.webmanifest
+src/
+  app/
+    api/
+      translate/
+        route.ts
+    globals.css
+    icon.png
+    layout.tsx
+    page.tsx
+    robots.ts
+    sitemap.ts
+  components/
+    Reader.tsx
+  content/
+    rasa-panchadyayi.txt
+.gitignore
+eslint.config.mjs
+next-env.d.ts
+next.config.ts
+package.json
+README.md
+repomix.config.json
+SOURCE-NOTE.txt
+tsconfig.json
+</directory_structure>
+
+<files>
+This section contains the contents of the repository's files.
+
+<file path="public/site.webmanifest">
+{
+  "name": "Rasa Panchadyayi",
+  "short_name": "Rasa",
+  "description": "A Malayalam reader for the Rasa Panchadyayi.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#fbfaf6",
+  "theme_color": "#101b1a"
+}
+</file>
+
+<file path="src/app/api/translate/route.ts">
+import { NextResponse } from "next/server";
+
+export async function POST(req: Request) {
+  try {
+    const { text, target, source = "ml" } = await req.json();
+
+    if (!text || !target) {
+      return NextResponse.json({ error: "Missing text or target language" }, { status: 400 });
+    }
+
+    if (target === source) {
+      return NextResponse.json({ translatedText: text });
+    }
+
+    // We chunk the text so we don't hit Google's URL length limits
+    const paragraphs = text.split(/\n{2,}/);
+    const translatedParagraphs: string[] = [];
+
+    for (const para of paragraphs) {
+      if (!para.trim()) {
+        translatedParagraphs.push(para);
+        continue;
+      }
+
+      // Chunk very long paragraphs
+      const chunks: string[] = [];
+      for (let i = 0; i < para.length; i += 4000) {
+        chunks.push(para.slice(i, i + 4000));
+      }
+
+      const chunkTranslations: string[] = [];
+      for (const chunk of chunks) {
+        try {
+          const url =
+            "https://translate.googleapis.com/translate_a/single" +
+            `?client=gtx&sl=${source}&tl=${target}&dt=t&q=` +
+            encodeURIComponent(chunk);
+          
+          const res = await fetch(url);
+          if (!res.ok) throw new Error("Google API error");
+          
+          const data = await res.json();
+          const joined = (data[0] as unknown[])
+            .map((seg) => (Array.isArray(seg) ? (seg[0] as string) : ""))
+            .join("");
+          
+          chunkTranslations.push(joined);
+        } catch (e) {
+          // Fallback to original chunk if this specific piece fails
+          chunkTranslations.push(chunk);
+        }
+      }
+      translatedParagraphs.push(chunkTranslations.join(""));
+    }
+
+    return NextResponse.json({ translatedText: translatedParagraphs.join("\n\n") });
+  } catch (error) {
+    return NextResponse.json({ error: "Translation failed" }, { status: 500 });
+  }
+}
+</file>
+
+<file path="src/app/globals.css">
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Noto+Serif+Malayalam:wght@400;500;600;700&display=swap');
+
+:root {
+  --ink: #23312e;
+  --muted: #687873;
+  --paper: #fbfaf6;
+  --cream: #f3efe5;
+  --green: #193d35;
+  --green-deep: #102b26;
+  --gold: #b58a4b;
+  --line: #e9e4d8;
+  --reader-scale: 1;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; scroll-padding-top: 90px; }
+body { margin: 0; background: var(--paper); color: var(--ink); font-family: 'DM Sans', sans-serif; -webkit-font-smoothing: antialiased; }
+button, select { font: inherit; }
+a { color: inherit; text-decoration: none; }
+.site-shell { min-height: 100vh; overflow: clip; position: relative; }
+.ambient { position: absolute; pointer-events: none; border-radius: 50%; filter: blur(1px); opacity: .45; }
+.ambient-one { width: 440px; height: 440px; background: radial-gradient(circle, #e8ddc6 0, transparent 70%); top: 180px; left: -270px; }
+.ambient-two { width: 500px; height: 500px; background: radial-gradient(circle, #dfe9df 0, transparent 70%); top: 700px; right: -320px; }
+.topbar { width: min(1220px, calc(100% - 64px)); height: 88px; margin: auto; display: flex; align-items: center; justify-content: space-between; position: relative; z-index: 2; border-bottom: 1px solid rgba(35,49,46,.08); }
+.brand { display: flex; gap: 13px; align-items: center; }
+.brand-mark { width: 42px; height: 42px; display: grid; place-items: center; border: 1px solid #d7c49f; color: var(--gold); border-radius: 50%; font-family: serif; font-size: 23px; }
+.brand-copy { display: flex; flex-direction: column; gap: 4px; }
+.brand-copy strong { font-size: 11px; letter-spacing: .19em; color: var(--green); }
+.brand-copy small { color: #87918c; font-size: 8px; letter-spacing: .16em; }
+.top-actions { display: flex; align-items: center; gap: 30px; }
+.nav-link { font-size: 12px; color: var(--muted); }
+.nav-link:hover, .back-top:hover { color: var(--gold); }
+.icon-button { width: 39px; height: 39px; border: 1px solid var(--line); background: #fffdf9; border-radius: 50%; color: var(--green); cursor: pointer; font-family: Georgia,serif; font-size: 14px; }
+.hero { text-align: center; padding: 88px 20px 72px; position: relative; }
+.hero-kicker, .eyebrow { color: #9b7b4c; letter-spacing: .2em; font-size: 9px; font-weight: 700; }
+.hero-kicker { display: flex; align-items: center; justify-content: center; gap: 13px; }
+.hero-kicker span { width: 28px; height: 1px; background: #c8b28e; }
+.hero-symbol { font-size: 28px; color: #b9955c; margin: 26px 0 11px; }
+.hero h1 { margin: 0; color: var(--green-deep); font-family: 'Noto Serif Malayalam', serif; font-size: clamp(40px, 6vw, 66px); line-height: 1.35; font-weight: 600; }
+.hero-translit { margin: 7px 0 0; font: italic 19px Georgia,serif; letter-spacing: .08em; color: #9a8058; }
+.hero-description { margin: 24px auto 0; max-width: 560px; color: #66746e; font-family: 'Noto Serif Malayalam', serif; font-size: 15px; line-height: 2; }
+.hero-meta { display: flex; justify-content: center; flex-wrap: wrap; gap: 25px; margin-top: 31px; color: #68756f; font-size: 10px; letter-spacing: .04em; }
+.hero-meta span { display: flex; align-items: center; gap: 8px; }
+.hero-meta i { display: inline-block; width: 4px; height: 4px; background: #b48b51; border-radius: 50%; }
+.reader-toolbar { width: min(1050px, calc(100% - 48px)); margin: 0 auto 24px; min-height: 88px; background: #fffefa; border: 1px solid #eee9df; border-radius: 12px; box-shadow: 0 12px 35px rgba(35,49,46,.045); padding: 18px 24px; display: flex; align-items: center; justify-content: space-between; gap: 18px; position: relative; z-index: 1; }
+.reader-label { display: flex; flex-direction: column; gap: 6px; }
+.reader-label strong { font-family: 'Noto Serif Malayalam', serif; font-size: 16px; color: var(--green); }
+.toolbar-actions { display: flex; align-items: center; gap: 10px; }
+.language-select-wrap { height: 46px; display: flex; align-items: center; gap: 9px; border: 1px solid #e7e2d7; border-radius: 7px; padding: 0 13px; position: relative; background: #fff; color: var(--green); }
+.language-select-wrap select { appearance: none; border: 0; outline: 0; background: transparent; color: #344640; min-width: 190px; font-size: 12px; cursor: pointer; padding-right: 16px; }
+.globe { color: #a98857; font-size: 20px; }
+.select-chevron { position: absolute; right: 12px; pointer-events: none; color: #9b8b70; }
+.share-button { height: 46px; padding: 0 16px; border: 1px solid #e7e2d7; border-radius: 7px; background: #fff; color: #53635d; cursor: pointer; font-size: 11px; }
+.share-button span { margin-right: 5px; color: #a98857; }
+.settings-panel { width: min(1050px, calc(100% - 48px)); margin: -12px auto 24px; background: #f2f0e8; border: 1px solid #e8e2d4; border-radius: 9px; padding: 15px 20px; display: flex; align-items: center; justify-content: space-between; }
+.settings-panel div:first-child { display: flex; flex-direction: column; gap: 4px; }
+.settings-panel strong { font-size: 12px; color: var(--green); }
+.settings-panel span { font-size: 10px; color: var(--muted); }
+.font-controls { display: flex; align-items: center; gap: 12px; }
+.font-controls button { border: 1px solid #dcd4c4; background: #fffdf8; border-radius: 5px; padding: 7px 10px; cursor: pointer; color: var(--green); }
+.translate-engine { position: absolute; width: 1px; height: 1px; overflow: hidden; opacity: 0; pointer-events: none; }
+.reading-layout { width: min(1050px, calc(100% - 48px)); margin: 0 auto; display: grid; grid-template-columns: 170px minmax(0, 1fr); gap: 25px; align-items: start; }
+.chapter-aside { min-width: 0; }
+.aside-sticky { position: sticky; top: 28px; padding: 22px 10px 20px 2px; }
+.chapter-range { color: var(--green); font: 500 48px Georgia,serif; letter-spacing: -.07em; margin-top: 17px; }
+.chapter-range span { color: #b58a4b; font-size: 29px; padding: 0 3px; }
+.aside-sticky > p { font-family: 'Noto Serif Malayalam', serif; font-size: 12px; line-height: 2; color: #6b7972; margin: 4px 0 21px; }
+.aside-rule { width: 30px; height: 1px; background: #c6a775; margin-bottom: 20px; }
+.reading-stat { display: flex; flex-direction: column; gap: 5px; margin: 0 0 17px; }
+.reading-stat span { color: #a0a59d; font-size: 8px; letter-spacing: .16em; }
+.reading-stat strong { color: #475b52; font: 18px Georgia,serif; }
+.continue-link { display: inline-flex; align-items: center; gap: 12px; margin-top: 12px; color: #9a7949; font-size: 10px; }
+.manuscript-card { background: #fffefa; border: 1px solid #eee9df; border-radius: 12px; box-shadow: 0 18px 50px rgba(35,49,46,.055); padding: clamp(25px, 5vw, 58px); min-width: 0; }
+.manuscript-heading { display: flex; justify-content: space-between; align-items: center; gap: 18px; }
+.manuscript-heading h2 { font-family: 'Noto Serif Malayalam', serif; font-size: 27px; line-height: 1.5; font-weight: 600; color: var(--green); margin: 9px 0 0; }
+.manuscript-heading p { font-family: 'Noto Serif Malayalam', serif; color: #7c8982; font-size: 12px; margin: 4px 0 0; }
+.chapter-seal { width: 54px; height: 54px; flex: 0 0 auto; border: 1px solid #d9c9aa; border-radius: 50%; display: grid; place-content: center; text-align: center; color: #a48452; font: 16px Georgia,serif; line-height: 1.05; }
+.chapter-seal small { font-size: 8px; }
+.ornament-divider { display: flex; align-items: center; gap: 14px; margin: 28px 0 32px; color: #b48e58; }
+.ornament-divider::before, .ornament-divider::after { content: ""; height: 1px; background: #eee8dc; flex: 1; }
+.ornament-divider span { font-size: 13px; }
+.manuscript-content { --reader-scale: 1; }
+.manuscript-content pre { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; color: #374640; font-family: 'Noto Serif Malayalam', serif; font-size: calc(15px * var(--reader-scale)); font-weight: 400; line-height: 2.28; letter-spacing: 0; tab-size: 2; }
+.manuscript-footer { display: flex; justify-content: center; align-items: center; gap: 18px; margin-top: 48px; color: #b18b56; }
+.manuscript-footer p { font-family: 'Noto Serif Malayalam', serif; font-size: 13px; color: #8b795c; }
+.about-section { width: min(690px, calc(100% - 48px)); margin: 100px auto 90px; text-align: center; }
+.about-section h2 { color: var(--green); font: 500 clamp(25px, 4vw, 35px) Georgia,serif; margin: 17px 0; }
+.about-section > p { color: #697771; font-family: 'Noto Serif Malayalam', serif; font-size: 13px; line-height: 2.1; }
+.about-section .translation-note { border-top: 1px solid var(--line); padding-top: 20px; margin-top: 25px; font-family: 'DM Sans',sans-serif; font-size: 11px; line-height: 1.8; color: #89928b; }
+.site-footer { width: min(1220px, calc(100% - 64px)); margin: auto; min-height: 90px; border-top: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; gap: 18px; color: #929b94; font-size: 10px; }
+.footer-brand { display: flex; align-items: center; gap: 9px; color: #a88756; font: 18px Georgia,serif; }
+.footer-brand span { font: 700 9px 'DM Sans',sans-serif; letter-spacing: .16em; color: #53635c; }
+.back-top { color: #64736b; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+.goog-te-banner-frame, .skiptranslate iframe { display: none !important; }
+body { top: 0 !important; }
+@media (max-width: 760px) {
+  .topbar { width: calc(100% - 36px); height: 72px; }
+  .brand-mark { width: 36px; height: 36px; }
+  .brand-copy strong { font-size: 9px; }
+  .brand-copy small { font-size: 7px; }
+  .top-actions { gap: 12px; }
+  .nav-link { display: none; }
+  .hero { padding: 66px 18px 49px; }
+  .hero-kicker { font-size: 8px; letter-spacing: .13em; }
+  .hero-description { font-size: 13px; }
+  .hero-meta { gap: 12px 18px; font-size: 9px; }
+  .reader-toolbar { width: calc(100% - 28px); padding: 15px; flex-direction: column; align-items: stretch; }
+  .reader-label { gap: 4px; }
+  .toolbar-actions { width: 100%; }
+  .language-select-wrap { flex: 1; min-width: 0; }
+  .language-select-wrap select { min-width: 0; width: 100%; }
+  .share-button { flex: 0 0 auto; }
+  .settings-panel { width: calc(100% - 28px); }
+  .reading-layout { width: calc(100% - 28px); display: block; }
+  .chapter-aside { display: none; }
+  .manuscript-card { padding: 25px 20px; }
+  .manuscript-heading h2 { font-size: 23px; }
+  .manuscript-content pre { font-size: calc(14px * var(--reader-scale)); line-height: 2.12; }
+  .about-section { margin: 70px auto 60px; }
+  .site-footer { width: calc(100% - 36px); min-height: 100px; flex-wrap: wrap; justify-content: center; text-align: center; padding: 20px 0; }
+}
+@media (max-width: 390px) {
+  .brand-copy small { letter-spacing: .09em; }
+  .hero-meta { flex-direction: column; align-items: center; }
+  .share-button { padding: 0 11px; }
+  .chapter-seal { width: 46px; height: 46px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; transition-duration: .01ms !important; }
+}
+</file>
+
+<file path="src/app/layout.tsx">
+import type { Metadata, Viewport } from "next";
+import "./globals.css";
+
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://example.com";
+
+export const metadata: Metadata = {
+  metadataBase: new URL(siteUrl),
+  title: {
+    default: "രാസപഞ്ചാധ്യായി | Rasa Panchadyayi",
+    template: "%s | Rasa Panchadyayi",
+  },
+  description:
+    "ശ്രീമദ് ഭാഗവതത്തിലെ ദശമസ്കന്ധം 29–33 അധ്യായങ്ങളെ ആസ്പദമാക്കിയുള്ള രാസപഞ്ചാധ്യായിയുടെ മലയാള വ്യാഖ്യാന വായന. Read the Rasa Panchadyayi in Malayalam and explore translations.",
+  applicationName: "Rasa Panchadyayi",
+  keywords: [
+    "രാസപഞ്ചാധ്യായി", "രാസലീല", "ശ്രീമദ് ഭാഗവതം", "Srimad Bhagavatam",
+    "Rasa Panchadyayi", "Bhagavata Purana", "Malayalam Bhagavatam",
+    "Gopika Geetham", "Gopi Geetham", "Krishna"
+  ],
+  alternates: { canonical: "/" },
+  openGraph: {
+    type: "website",
+    locale: "ml_IN",
+    title: "രാസപഞ്ചാധ്യായി | Rasa Panchadyayi",
+    description: "ശ്രീമദ് ഭാഗവതത്തിലെ രാസപഞ്ചാധ്യായിയുടെ മലയാള വായന.",
+    siteName: "Rasa Panchadyayi",
+  },
+  twitter: {
+    card: "summary",
+    title: "രാസപഞ്ചാധ്യായി | Rasa Panchadyayi",
+    description: "ശ്രീമദ് ഭാഗവതത്തിലെ രാസപഞ്ചാധ്യായിയുടെ മലയാള വായന.",
+  },
+  robots: { index: true, follow: true },
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  themeColor: "#101b1a",
+  colorScheme: "light",
+};
+
+export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+  return (
+    <html lang="ml">
+      <body>{children}</body>
+    </html>
+  );
+}
+</file>
+
+<file path="src/app/page.tsx">
+import { readFile } from "node:fs/promises";
+import path from "node:path";
+import Reader from "@/components/Reader";
+
+export default async function Home() {
+  const sourcePath = path.join(process.cwd(), "src/content/rasa-panchadyayi.txt");
+  const manuscript = await readFile(sourcePath, "utf8");
+
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    headline: "രാസപഞ്ചാധ്യായി — ശ്രീമദ് ഭാഗവതം",
+    description:
+      "ശ്രീമദ് ഭാഗവതത്തിലെ ദശമസ്കന്ധം 29 മുതൽ 33 വരെയുള്ള അധ്യായങ്ങളെ ആസ്പദമാക്കിയുള്ള മലയാള വ്യാഖ്യാനം.",
+    inLanguage: "ml",
+    isAccessibleForFree: true,
+    articleSection: "ശ്രീമദ് ഭാഗവതം — ദശമസ്കന്ധം",
+    author: { "@type": "Organization", name: "Rasa Panchadyayi Reader" },
+    publisher: { "@type": "Organization", name: "Rasa Panchadyayi Reader" }
+  };
+
+  return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }}
+      />
+      <Reader manuscript={manuscript} />
+    </>
+  );
+}
+</file>
+
+<file path="src/app/robots.ts">
+import type { MetadataRoute } from "next";
+
+export default function robots(): MetadataRoute.Robots {
+  const base = process.env.NEXT_PUBLIC_SITE_URL || "https://example.com";
+  return {
+    rules: { userAgent: "*", allow: "/" },
+    sitemap: `${base}/sitemap.xml`,
+  };
+}
+</file>
+
+<file path="src/app/sitemap.ts">
+import type { MetadataRoute } from "next";
+
+export default function sitemap(): MetadataRoute.Sitemap {
+  const base = process.env.NEXT_PUBLIC_SITE_URL || "https://example.com";
+  return [{ url: base, lastModified: new Date(), changeFrequency: "monthly", priority: 1 }];
+}
+</file>
+
+<file path="src/components/Reader.tsx">
+"use client";
+
+import { useEffect, useMemo, useRef, useState } from "react";
+
+type Language = { code: string; name: string; native: string };
+
+const languages: Language[] = [
+  { code: "ml", name: "Malayalam", native: "മലയാളം" },
+  { code: "en", name: "English", native: "English" },
+  { code: "hi", name: "Hindi", native: "हिन्दी" },
+  { code: "ta", name: "Tamil", native: "தமிழ்" },
+  { code: "te", name: "Telugu", native: "తెలుగు" },
+  { code: "kn", name: "Kannada", native: "ಕನ್ನಡ" },
+  { code: "mr", name: "Marathi", native: "मराठी" },
+  { code: "bn", name: "Bengali", native: "বাংলা" },
+  { code: "gu", name: "Gujarati", native: "ગુજરાતી" },
+  { code: "pa", name: "Punjabi", native: "ਪੰਜਾਬੀ" },
+  { code: "or", name: "Odia", native: "ଓଡ଼ିଆ" },
+  { code: "as", name: "Assamese", native: "অসমীয়া" },
+  { code: "ur", name: "Urdu", native: "اردو" },
+  { code: "sa", name: "Sanskrit", native: "संस्कृतम्" },
+  { code: "ne", name: "Nepali", native: "नेपाली" },
+];
+
+/**
+ * Calls our own backend API route to translate the text.
+ * This bypasses Google's CORS restrictions.
+ */
+async function translateText(
+  text: string,
+  target: string,
+  source = "ml"
+): Promise<string> {
+  if (target === source || !text.trim()) return text;
+
+  const response = await fetch("/api/translate", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ text, target, source }),
+  });
+
+  if (!response.ok) {
+    throw new Error("Translation failed");
+  }
+
+  const data = await response.json();
+  return data.translatedText;
+}
+
+export default function Reader({ manuscript }: { manuscript: string }) {
+  const [selected, setSelected] = useState("ml");
+  const [fontScale, setFontScale] = useState(1);
+  const [showSettings, setShowSettings] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  // Translation state
+  const [translatedManuscript, setTranslatedManuscript] = useState<string | null>(null);
+  const [isTranslating, setIsTranslating] = useState(false);
+  const [translateError, setTranslateError] = useState<string | null>(null);
+
+  // Cache translations so switching back and forth is instant
+  const cache = useRef<Map<string, string>>(new Map());
+
+  const wordCount = useMemo(
+    () => manuscript.trim().split(/\s+/u).length,
+    [manuscript]
+  );
+
+  // The text actually rendered in the manuscript area
+  const displayText = selected === "ml" ? manuscript : translatedManuscript ?? manuscript;
+
+  // Whenever the language changes, fetch/cache the translation
+  useEffect(() => {
+    if (selected === "ml") {
+      setTranslatedManuscript(null);
+      setTranslateError(null);
+      setIsTranslating(false);
+      return;
+    }
+
+    const cached = cache.current.get(selected);
+    if (cached) {
+      setTranslatedManuscript(cached);
+      setTranslateError(null);
+      setIsTranslating(false);
+      return;
+    }
+
+    let cancelled = false;
+    setIsTranslating(true);
+    setTranslateError(null);
+
+    translateText(manuscript, selected, "ml")
+      .then((result) => {
+        if (cancelled) return;
+        cache.current.set(selected, result);
+        setTranslatedManuscript(result);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setTranslateError("Translation failed. Showing original Malayalam.");
+        setTranslatedManuscript(manuscript);
+      })
+      .finally(() => {
+        if (!cancelled) setIsTranslating(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [selected, manuscript]);
+
+  async function copyLink() {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1800);
+    } catch {
+      setCopied(false);
+    }
+  }
+
+  return (
+    <main className="site-shell">
+      <div className="ambient ambient-one" aria-hidden="true" />
+      <div className="ambient ambient-two" aria-hidden="true" />
+
+      <header className="topbar">
+        <a className="brand" href="#top" aria-label="Rasa Panchadyayi home">
+          <span className="brand-mark" aria-hidden="true">ॐ</span>
+          <span className="brand-copy">
+            <strong>RASA PANCHADYAYI</strong>
+            <small>THE DIVINE VERSE · THE ETERNAL LOVE</small>
+          </span>
+        </a>
+        <nav className="top-actions" aria-label="Page actions">
+          <a className="nav-link" href="#about">About the text</a>
+          <button
+            className="icon-button"
+            onClick={() => setShowSettings((v) => !v)}
+            aria-label="Reading settings"
+            aria-expanded={showSettings}
+          >
+            <span aria-hidden="true">Aa</span>
+          </button>
+        </nav>
+      </header>
+
+      <section className="hero" id="top">
+        <div className="hero-kicker"><span /> THE HEART OF ŚRĪMAD BHĀGAVATAM <span /></div>
+        <div className="hero-symbol" aria-hidden="true">❋</div>
+        <h1>Rasa Panchadyayi</h1>
+        <p className="hero-description">
+          Experience the supreme secret of devotion and love through the divine pastimes of Lord Sri Krishna.
+        </p>
+        <div className="hero-meta">
+          <span><i /> Canto 10</span>
+          <span><i /> Chapters 29—33</span>
+          <span><i /> Malayalam Commentary</span>
+        </div>
+      </section>
+
+      <section className="reader-toolbar" aria-label="Reader controls">
+        <div className="reader-label">
+          <span className="eyebrow">YOUR READING SPACE</span>
+          <strong>Read in your language</strong>
+        </div>
+        <div className="toolbar-actions">
+          <label className="language-select-wrap">
+            <span className="sr-only">Choose translation language</span>
+            <span className="globe" aria-hidden="true">◎</span>
+            <select
+              value={selected}
+              onChange={(e) => setSelected(e.target.value)}
+              aria-label="Translation language"
+            >
+              {languages.map((language) => (
+                <option value={language.code} key={language.code}>
+                  {language.native} · {language.name}
+                </option>
+              ))}
+            </select>
+            <span className="select-chevron" aria-hidden="true">⌄</span>
+          </label>
+          <button className="share-button" onClick={copyLink} aria-label="Copy page link">
+            <span aria-hidden="true">↗</span> {copied ? "Copied" : "Share"}
+          </button>
+        </div>
+      </section>
+
+      {showSettings && (
+        <section className="settings-panel" aria-label="Reading settings">
+          <div>
+            <strong>Text size</strong>
+            <span>Adjust for comfortable reading</span>
+          </div>
+          <div className="font-controls">
+            <button
+              onClick={() => setFontScale((v) => Math.max(0.85, +(v - 0.05).toFixed(2)))}
+              aria-label="Decrease text size"
+            >A−</button>
+            <span>{Math.round(fontScale * 100)}%</span>
+            <button
+              onClick={() => setFontScale((v) => Math.min(1.35, +(v + 0.05).toFixed(2)))}
+              aria-label="Increase text size"
+            >A+</button>
+          </div>
+        </section>
+      )}
+
+      <section className="reading-layout">
+        <aside className="chapter-aside">
+          <div className="aside-sticky">
+            <span className="eyebrow">IN THIS EDITION</span>
+            <div className="chapter-range">29<span>—</span>33</div>
+            <p>Canto 10<br />Rasa Panchadyayi</p>
+            <div className="aside-rule" />
+            <div className="reading-stat">
+              <span>WORDS</span>
+              <strong>{wordCount.toLocaleString("en-IN")}</strong>
+            </div>
+            <div className="reading-stat">
+              <span>LANGUAGES</span>
+              <strong>{languages.length}</strong>
+            </div>
+            <a href="#manuscript" className="continue-link">Begin reading <span>↓</span></a>
+          </div>
+        </aside>
+
+        <article className="manuscript-card" id="manuscript">
+          <div className="manuscript-heading">
+            <div>
+              <span className="eyebrow">THE SACRED NARRATIVE</span>
+              <h2>Sara Sangraham</h2>
+              <p>Srimad Bhagavatam · Canto 10</p>
+            </div>
+            <div className="chapter-seal" aria-label="Chapter 29 to 33">X<br /><small>29–33</small></div>
+          </div>
+          <div className="ornament-divider"><span>✧</span></div>
+
+          {isTranslating && (
+            <p
+              role="status"
+              style={{
+                fontSize: 12,
+                color: "#9b7b4c",
+                textAlign: "center",
+                margin: "8px 0 16px",
+                letterSpacing: ".05em",
+              }}
+            >
+              Translating…
+            </p>
+          )}
+          {translateError && (
+            <p
+              role="alert"
+              style={{
+                fontSize: 12,
+                color: "#b04040",
+                textAlign: "center",
+                margin: "8px 0 16px",
+              }}
+            >
+              {translateError}
+            </p>
+          )}
+
+          <div
+            className="manuscript-content"
+            style={{ "--reader-scale": fontScale } as React.CSSProperties}
+          >
+            <pre>{displayText}</pre>
+          </div>
+          <footer className="manuscript-footer">
+            <span>✧</span>
+            <p>Sri Krishnarpanamastu</p>
+            <span>✧</span>
+          </footer>
+        </article>
+      </section>
+
+      <section className="about-section" id="about">
+        <span className="eyebrow">A NOTE ON THIS READING</span>
+        <h2>The essence of divine love.</h2>
+        <p>
+          This reading includes the five chapters known as the Rasa Panchadyayi 
+          (Canto 10, Chapters 29–33) from the Srimad Bhagavatam. The original Malayalam 
+          text provided here has been preserved in its entirety.
+        </p>
+        <p className="translation-note">
+          Translation support is provided through Google Translate. Translated wording is
+          machine-generated and may not preserve every theological nuance. Select മലയാളം
+          to return to the original text.
+        </p>
+      </section>
+
+      <footer className="site-footer">
+        <a className="footer-brand" href="#top">ॐ <span>RASA PANCHADYAYI</span></a>
+        <span>Made for quiet reading & contemplation</span>
+        <a href="#top" className="back-top">Back to top ↑</a>
+      </footer>
+    </main>
+  );
+}
+</file>
+
+<file path="src/content/rasa-panchadyayi.txt">
+# സാരസംഗ്രഹം
+## സ്കന്ധം 10, അദ്ധ്യായം 29
+
+### അദ്ധ്യായം 29
+
+[യാതൊരു മഹാലക്ഷ്മിയുടെ ഒരു കടാക്ഷം തങ്ങൾക്കു ലഭിക്കുവാനായ്ക്കൊണ്ട് അന്യദേവന്മാർ കഷ്ടപ്പെടുന്നുവോ, ആ ശ്രീദേവി നിന്തിരുവടിയുടെ വക്ഷസ്സിൽ സ്ഥാനം ലഭിച്ചിട്ടും തൃപ്തിപ്പെടാതെ ഭൃത്യന്മാർ ആശ്രയിക്കുന്ന പാദരജസ്സിനെ തുളസിയോടുകൂടിച്ചേർന്ന് ആഗ്രഹിച്ചു. അതുപോലെ ഞങ്ങളും അങ്ങയുടെ പാദരജസ്സിനെത്തന്നെ ആശ്രയിച്ചവരാകുന്നു.]
+
+[ആയതിനാൽ അങ്ങയെ ഉപാസിക്കാനുള്ള ആഗ്രഹത്തോടെ ഗൃഹങ്ങളെ ഉപേക്ഷിച്ചു നിന്തിരുവടിയുടെ പാദമൂലത്തെ ഞങ്ങൾ ആശ്രയിച്ചു വന്നവരാകുന്നു. സന്താപനാശനനായ നിന്തിരുവടി ഞങ്ങളിൽ പ്രസാദിക്കേണമേ! അങ്ങയുടെ മനോഹരമന്ദഹാസത്തോടുകൂടിയ കടാക്ഷവീക്ഷണത്താൽ ജ്വലിച്ച കാമം കൊണ്ടു തപ്തമാനസരായ ഞങ്ങൾക്കു ഹേ, പുരുഷഭൂഷണ! അങ്ങയുടെ ദാസ്യത്തെ നൽകിയാലും.]
+
+### രാസക്രീഡ
+**ശ്രീ ഭഗവാൻ ഗോപികളുമായി രാസലീല ആരംഭിക്കുന്നതു്**
+
+ശ്രീമദ് ഭാഗവതം ഗോലോകനാഥനായ സാക്ഷാത് ശ്രീകൃഷ്ണഭഗവാന്റെ പ്രത്യക്ഷ സ്വരൂപമാണു്. ശ്രീശുകൻ ഇനി വർണ്ണിക്കാൻ പോകുന്ന 'രാസപഞ്ചാദ്ധ്യായി' എന്ന സുപ്രസിദ്ധമായ അഞ്ചദ്ധ്യായങ്ങൾ ശ്രീമദ് ഭാഗവത ശരീരത്തിലെ പഞ്ചപ്രാണങ്ങളാണെന്നാണു് അഭിജ്ഞമതം. ശ്രീമദ് ഭാഗവതം സർവ്വവേദാന്ത സാരമാകുന്നു. ആ സാരരസാമൃതം പാനം ചെയ്തു മത്തനായവനു് അന്യമായ ഒന്നിലും രതിയുണ്ടാകുന്നതല്ല. വേദാന്തശാസ്ത്രം സംസാരമഹാദുഃഖത്തിൽ നിന്നും മുക്തി പ്രാപിക്കാനുള്ള മാർഗ്ഗമുപദേശിക്കുന്നതോടുകൂടി അവസാനിക്കുന്നു. എന്നാൽ ആത്യന്തികമായ സംസാരനിവൃത്തിക്കുമുപരിയായ പ്രേമാനന്ദത്തെ തരുന്നതും അവശ്യം ആസ്വദിക്കേണ്ടതുമായ മുകുന്ദചരണസേവാമൃതം—മുക്തന്റെ ആനന്ദത്തെക്കാൾ എത്രയോ ഉത്കൃഷ്ടമായ ഭജനാനന്ദം—എങ്ങനെ ലഭ്യമാകുമെന്നു് സംശയാതീതമായി ബോധിപ്പിക്കുന്ന ഏകശാസ്ത്രം ശ്രീമദ് ഭാഗവതമാണു്.
+
+ശ്രീമദ് ഭഗവദ് ഗീതോപനിഷത്തിന്റെ സാരസാരമായ “സർവ്വധർമ്മാൻ പരിത്യജ്യ മാമേകം ശരണം വ്രജ, അഹം ത്വാ സർവ്വപാപേഭ്യോ മോക്ഷയിഷ്യാമി മാ ശുച” എന്ന ചരമമന്ത്രത്തെ സമ്യക്കായനുഷ്ഠിച്ചു് സകലലോകത്തിനു പ്രകാശിപ്പിച്ചു കൊടുത്ത ഗോപികാസുന്ദരാട്ടിമാരോടുകൂടി യുഗളമൂർത്തിയായ ശ്രീരാധാകൃഷ്ണപ്രഭു നടത്തിയ അത്യദ്ഭുതകരവും അത്യപൂർവ്വവും അതിദിവ്യവുമായ രാസലീലയെയാണു് ഭഗവാൻ ശ്രീ ബാദരായണി ഇനി വർണ്ണിക്കുവാൻ പോകുന്നതു്. ഗോപികളെപ്പോലെ ശരണാഗതിധർമ്മം ശരിയായറിഞ്ഞു്, സർവ്വധർമ്മങ്ങളേയും പരിത്യജിച്ചു് പ്രിയതമനായ ഭഗവാനെ അനന്യഭാവേന ശരണം പ്രാപിച്ചവരായി മററാരു. തന്നെ ഇതുവരെ യുണ്ടായിട്ടില്ല. ക്രീഡാലോലനും ലീലാമാനുഷവിഗ്രഹനും പ്രപഞ്ചസൂത്രധാരിയുമായ ശ്രീഭഗവാൻ 'മന്മഥ വിജയ'മെന്നൊരപൂർവ്വ നാടകമാടുന്നതിനു വേണ്ടി, തന്റെ അനന്ത കോടി ബ്രഹ്മാണ്ഡങ്ങളിലെല്ലാം പരിശോധിച്ചു തിരഞ്ഞെടുത്ത മണിരത്നങ്ങളായിരുന്നു ഗോപികമാർ. ശുദ്ധസ്ഫടിക സകാശകളായ ആ ദിവ്യാത്മാക്കളിൽ മാത്രമെ മഹാപ്രഭുവിനു് തന്റെ പ്രതിബിംബം വികൃതമാകാതെ ദർശിക്കുവാൻ കഴിഞ്ഞുള്ളു. അവരോടുകൂടിയല്ലാതെ ശ്രീഭഗവാൻ മററാരോടുകൂടി ക്രീഡിക്കും? അതിനാൽ ദിവ്യമല്ലാത്തതായ യാതൊന്നും തന്നെ അവശേഷിക്കാത്ത പരമപരിശുദ്ധകളായ ഗോപികളോടുകൂടി ദേവദേവേശൻ രാസലീലയാടി. സാക്ഷാത് ഗോലോകത്തിൽ മാത്രം നിത്യസംഭവമായ ആ പരമാദ്ഭുതലീലയെ സർവ്വേശ്വരൻ, തന്റെ അപാരകാരുണ്യത്താൽ വ്രജഭൂമിയിലും പ്രകടമാക്കി.
+
+രാസലീലയുടെ തത്വം ഗുഹ്യാത് ഗുഹ്യതരമാണു്—പോര, ഗുഹ്യതമമാണു്. അതു് രജസ്തമഃസ്വഭാവികൾക്കു് ഒരിക്കലും ഗ്രാഹ്യമല്ല. തന്മൂലം ആ ദിവ്യലീല കലുഷചിത്തരായ അഭക്തരുടേയും നിരീശ്വരയുക്തിവാദികളുടേയും ഇതരമതസ്ഥരിൽപെട്ട ദോഷദൃക്കുകളുടേയും ശുഷ്കവിമർശനങ്ങൾക്കു് വിഷയമായിട്ടുണ്ടു്. ദിവ്യരാസലീലയുടെ മർമ്മം അല്പമെങ്കിലും ഗ്രഹിക്കാവുന്നവർ ശുദ്ധസാത്വികരും നിർമ്മത്സരബുദ്ധികളും ശ്രീകൃഷ്ണകൃപയ്ക്കു പാത്രീഭൂതരമായ അത്യുന്നതാധികാരികൾ മാത്രമാണു്. അതിനാൽ ഭഗവത് കൃപാകാംക്ഷികളായ നാം അത്യന്തം നമ്രതയോടും ഹൃദയശുദ്ധിയോടുംകൂടി വേണം ഈ കഥാഭാഗത്തെ സമീപിക്കുവാൻ.
+
+രാസക്രീഡാവർണ്ണനം സമാരംഭിക്കുന്ന സപ്താഹയജ്ഞശാലയിലേക്കു് നമുക്കൊന്നു എത്തിനോക്കാം. മഹാത്മാക്കളും സർവ്വസംഗപരിത്യാഗികളും ജീവന്മുക്തരുമായ ബ്രഹ്മർഷികളും രാജർഷികളും ദേവർഷികളും ശ്രീഭഗവാന്റെ പാദതീർത്ഥമായ ഗംഗയുടെ തീരത്തിലുള്ള യജ്ഞശാലയിൽ കഥാശ്രവണതൽപരരായി എത്തിച്ചേർന്നിരിക്കുന്നു. അഗ്രാസനത്തിലുപവിഷ്ടനായി കഥാലാപനം ചെയ്യുന്ന ശ്രീശുകബ്രഹ്മർഷി ജന്മനാ വിരക്തനും പരമഹംസചൂഡാമണിയുമാണു്. ശ്രീ വേദവ്യാസഭഗവാനു് ശ്രീകൃഷ്ണാരാധനത്താൽ ലഭിച്ച മഹാപ്രസാദമാണു് ശ്രീശുകൻ. ആത്മാരാമനായ അവിടുത്തേക്കു് ശ്രീഹരിലീലാകഥകളല്ലാതെ മററൊന്നും പറയാനില്ല. പുരോഭാഗത്തിരിക്കുന്ന മുഖ്യശ്രോതാവായ ശ്രീപരീക്ഷിത്തു് സദ് ഗുരുനാഥന്റെ ശ്രീമുഖത്തുനിന്നും കണ്ണെടുക്കാതെ ബദ്ധശ്രദ്ധനായി കഥാമൃതപാനം ചെയ്യുന്നു. അന്നേക്കു നാലാംദിവസം താൻ മരിക്കുമെന്നറിയാം. അതിനാൽ ലോകവിഷയങ്ങളെല്ലാം ദൂരെ ത്യജിച്ചു് ഏകാന്ത ഭക്തിഭാവത്തോടുകൂടി ശ്രീകൃഷ്ണചിത്തനായി സ്ഥിതി ചെയ്യുന്നു. സഭാവാസികളിലാർക്കും തന്നെ ദേഹസ്മരണ പോലുമില്ല. ഗൃഹധനാദികളിൽ അവർ നിഷ്കാമസരാണെന്നു പറയേണ്ടതില്ലല്ലോ.
+
+അത്രത്തോളം പരിപാവനമായ സദസ്സിൽ ശ്രീശുകബ്രഹ്മർഷി ഉത്ഘോഷണം ചെയ്ത മഹാവാണിയാണു് രാസലീല. ആ കാരണത്താൽ തന്നെ അതു് വിടന്മാരായ സ്ത്രീലോലുപരുടെ കാമകേളീജല്പനമല്ലെന്നു സ്പഷ്ടമാണല്ലോ. മറിച്ചു് പരമപ്രേമഭക്തന്മാരുടെ സർവ്വസ്വമായ ശ്രീ മുരളീധരന്റെ ദിവ്യലീലയാണു്. ഈ ഉത്കൃഷ്ടഭാവനയോടും ശ്രീശുകനെപ്പോലെ പരമകോമളവും പരിശുദ്ധവും ഭാവസമ്പൂർണ്ണവുമായ ചിത്തത്തോടും ശ്രീ പരീക്ഷിത്തിനെപ്പോലെ ഏകാന്തശ്രദ്ധയോടും കൂടി ഈ മധുരമധുരമായ ലീലയെ ശ്രവിക്കുന്ന ഭാഗ്യവാന്മാർ അതിവേഗം കാമമാകുന്ന ഹൃദ് രോഗത്തിൽ നിന്നും വിമുക്തരായി ശ്രീകൃഷ്ണപ്രേമികളായിത്തീരും ഇതിൽ സംശയമേ വേണ്ട.
+
+ഇനി ശ്രീഭഗവാന്റെ ചരണാരവിന്ദ ഭക്തകളായ ഗോപികളെക്കുറിച്ചാലോചിക്കണം. ഭഗവത് സങ്കല്പമനുസരിച്ചു് തന്തിരുവടിയുടെ അവതാരകാലത്തു് പരിചരിക്കുവാനും അത്യുത്കൃഷ്ടമായ മാധുര്യഭക്തിയെ ലോകത്തിനു കാണിച്ചുകൊടുക്കുവാനുമവതരിച്ച ശ്രുതിചരികളും ഋഷിചരികളും ദേവചരികളും നിത്യസിദ്ധകളുമാണു് അവർ. ഭക്തിയുടെ പരമോന്നത നിലയ്ക്കു് ഉപോദ് ബലകമായി ഭാഗവതാചാര്യന്മാരായ ശാണ്ഡില്യമഹർഷി 'യഥാവ്രജാംഗനാനാം' എന്നും ശ്രീനാരദഭഗവാൻ 'യഥാവ്രജഗോപികാനാം' എന്നും ദൃഷ്ടാന്തീകരിച്ചിരിക്കുന്നതു് ആ മഹതികളെയാണെന്നോർക്കണം. ജന്മനാ കൃഷ്ണമയികളായ അവരുടെ ഭക്തിവിശേഷമാണു് മഥുരയിലവതരിച്ച സർവ്വേശ്വരനെ ഗോകുലത്തിലെത്തിച്ചതു്. സ്വതവെ പരിപുഷ്ടമായ അവരുടെ ഭഗവത് പ്രേമത്തെ പ്രഭു തന്റെ അദ്ഭുതലീലകളാൽ അനുദിനം ഉത്തേജിപ്പിച്ചു. അവർ സർവ്വധർമ്മങ്ങളേയും സർവ്വാത്മനാ ഉപേക്ഷിച്ചു്, സ്ഥൂലശരീരങ്ങളേയും അവയുടെ വൃത്തികളേയും മറന്നു്, സ്വയം പ്രാപ്തമായ ഭാവശരീരങ്ങളോടുകൂടി ഗൃഹങ്ങളിൽ നിന്നിറങ്ങിത്തിരിച്ചു് ഭഗവത് സമീപമെത്തി. തന്തിരുവടി അവരെ, മററാർക്കും സ്വപ്നം കാണാൻ പോലും കഴിയാത്ത നിത്യാനന്ദസമുദ്രത്തിൽ നിമഗ്നരാക്കി. ലോകവന്ദ്യരായ ബ്രഹ്മശങ്കരാദികളും ശ്രീനാരദനും ശ്രീശുകനും ഉദ്ധവസ്വാമിയും ശ്രീചൈതന്യമഹാപ്രഭുവും ശ്രീധരാചാര്യസ്വാമികളും ശ്രീരാമകൃഷ്ണപരമഹംസനും നമ്മുടെ സദ് ഗുരുനാഥനും ഉത്തമഭക്തിയുടെ ഉത്തമ മാതൃകകളായി ഗോപികാസുന്ദരാട്ടിമാരെ സാദരം സ്തുതിക്കുന്നു. ഗോപികയ്ക്കു തുല്യം ഭക്തിയുടെ ഉച്ചകോടിയിലെത്തിയവരായി ലോകം മററാരെയും ഇന്നു വരെ കണ്ടിട്ടില്ലെന്നു ആ മഹാമതികളെല്ലാം ഉച്ചൈസ്വരം ഘോഷിക്കുന്നു. അധികാരികളായ ആ ലോകഗുരുവര്യന്മാരുടെ സത്യവാണികളെ വിശ്വസിക്കണം.
+
+ആപ്തകാമനായ ജഗദീശ്വരൻ എന്തിനുവേണ്ടി ഭൂലോകത്തിൽ രാസലീലയെ ചെയ്തുവെന്നു നോക്കാം. ശ്രേയോമാർഗ്ഗപ്രചാരികൾക്കു് തരണം ചെയ്യേണ്ട ഏററവും ദുസ്തരമായ വിലങ്ങുതടി കാമവാസനയാകുന്നുവല്ലോ. കാമാധിഷ്ഠാന ദേവതയായ മദനനു് താൻ അജയ്യനാണെന്നഹങ്കരിക്കുവാൻ ധാരാളം വകയുണ്ടു്. മന്മഥബാധയാൽ ബ്രഹ്മദേവൻ സ്വപുത്രിയെ പിൻതുടർന്നു, ഇന്ദ്രൻ അഹല്യയേയും ചന്ദ്രൻ ബൃഹസ്പതിയുടെ സഹധർമ്മിണിയേയും പ്രാപിച്ചു. കൂടാതെ പരാശരൻ, വിശ്വാമിത്രൻ, തുടങ്ങിയ പല മഹർഷിമാരും പുരൂരവസ്സ് യയാതി തുടങ്ങിയ നിരവധി രാജർഷികളും അബദ്ധത്തിലായിട്ടുണ്ടു്. പരാജയമെന്തെന്നറിയാത്ത മന്മഥൻ വിചാരിച്ചു: 'ബ്രഹ്മാദി പിപീലികാ പര്യന്തമുള്ള സമസ്ത ജീവരാശികളും എന്റെ കളിപ്പാവകളാണു്. ഒരിക്കൽ ശിവന്റെ കോപാഗ്നിയിൽ എന്റെ ശരീരം ഭസ്മമായി, ഞാൻ അനംഗനായി, ശരി തന്നെ. എങ്കിലും ശിവനിൽ ധ്യാനഭംഗവും ക്രോധവുമുണ്ടാക്കുവാനെനിക്കു കഴിഞ്ഞുവല്ലോ. രാമാവതാരത്തിൽ ശ്രീരാമൻ സീതാവിരഹാകലനായതും എന്റെ പ്രഭാവത്തിനു ദൃഷ്ടാന്തമല്ലേ? ഇനി ഗോകുലപതിയായ ശ്രീകൃഷ്ണൻ മാത്രമേ ബാക്കിയുള്ളു. ശ്രീകൃഷ്ണനേയും കൂടി ജയിച്ചാൽ എന്റെ വിജയം പൂർണ്ണമാകും.
+
+ഇപ്രകാരം മനക്കോട്ട കെട്ടിയിരിക്കുമ്പോഴാണു് ഭഗവാൻ ഗോകുലത്തിൽ പ്രകടമായതു്. മന്മഥൻ ശ്രീകൃഷ്ണന്റെ കൈശോരത്തെ പ്രതീക്ഷിച്ചിരിപ്പായി. ആ സമയവും വന്നു. 'ഭഗവാൻ സ്വയം ഗോപികളുമായി ക്രീഡിക്കാൻ സങ്കല്പിച്ചിരിക്കുന്നു. മന്മഥനില്ലാത്ത സ്ത്രീപുരുഷക്രീഡയോ? എന്റെ വിജയക്കൊടി നാട്ടാൻ ഇതുതന്നെ അവസരം' എന്നു നിശ്ചയിച്ചു് മന്മഥൻ തന്റെ അനുയായികളോടുകൂടി യമുനാപുളിനത്തിൽ ആഗതനായി. തന്റെ പുഷ്പബാണങ്ങളെ സജ്ജമാക്കിക്കൊണ്ടു് ശതകോടി ഗോപികളുടെ മധ്യത്തിൽ വിരാജിച്ചരുളുന്ന നവകിശോരനവരനായ ശ്യാമസുന്ദരനെ ഒരു നോക്കു നോക്കി, അത്രതന്നെ! വിദ്യുത് പ്രവാഹമേററതു പോലെ മന്മഥൻ മൂർഛിച്ചു വീണു. ബോധം വീണപ്പോൾ ഉച്ചത്തിൽ പ്രലപിച്ചു. "കഷ്ടം! വിധാതാവേ! അങ്ങു് പുരുഷജന്മം തന്നു് എന്നെ എന്തിനു വഞ്ചിച്ചു? ഈ ശ്യാമസുന്ദരന്റെ ജഗന്മോഹനരൂപത്തെ സമീപിച്ചു് അവിടുത്തെ ശ്രീചരണങ്ങളിൽ എല്ലാം എല്ലാം സമർപ്പിച്ചു് ഈ ഗോപരമണികളെപ്പോലെ ജന്മസാഫല്യം നേടാൻ എനിക്കു ഭാഗ്യമില്ലാതെ പോയല്ലോ! ഹതഭാഗ്യനായ ഞാൻ എന്തിനു ജീവിച്ചിരിക്കുന്നു?" പ്രാണിവർഗ്ഗങ്ങളെയെല്ലാം പരവശം കറക്കുന്ന മന്മഥൻ ഇപ്രകാരം ഭ്രമ പ്രഥമമായി മോഹിച്ചുപോയി. അങ്ങനെ മദനനേയും മോഹിപ്പിച്ച മദനമോഹനന്റെ അദ്ഭുതലീലയാണു് രാസക്രീഡ. ഇതിൽ ആശ്ചര്യത്തിനവകാശമില്ല. മന്മഥനു് എന്തെങ്കിലും ശക്തിയുണ്ടെങ്കിൽ അതു് ശ്രീഭഗവാൻ കൊടുത്തതാണു്. അഗ്നിയുടെ താപത്താൽ തപിക്കുന്ന ഇന്ധനാദികൾക്കു് അന്യവസ്തുക്കളെ ദഹിപ്പിക്കാൻ കഴിഞ്ഞേക്കാം. പക്ഷെ അവയ്ക്കു് അഗ്നിയെ എന്തു ചെയ്യാൻ കഴിയും?
+
+അതിനാൽ പുരുഷാർത്ഥ പ്രാപ്തിക്കു വിലങ്ങുതടിയായി നില്ക്കുന്ന മന്മഥവേഗത്തെ ജയിക്കണമെങ്കിൽ മന്മഥ മന്മഥനെത്തന്നെ ശരണം പ്രാപിച്ചേ മതിയാകൂ എന്ന സൂക്ഷ്മ തത്വത്തെ പ്രകാശിപ്പിക്കാനാണു് തന്തിരുവടി രാസക്രീഡയെ ചെയ്തതു്. ഗോപികളുടെ മനോരഥത്തിൽ കയറി മദനനെ മോഹിപ്പിച്ചതുകൊണ്ടു് ഭഗവാൻ മദന മോഹനനായി. വിവിധ കർമ്മവാസനകളുടെ ശൃംഖലയിൽപ്പെട്ടു് മോചനം കിട്ടാതെ പരിതപിക്കുന്ന നമുക്കു് ഗുരുകൃപാകടാക്ഷമാകുന്ന ദീപത്തിന്റെ സഹായത്തോടുകൂടി വിനയ നമ്രശിരസ്കരായി പ്രഭുവിന്റെ ലീലാരംഗത്തിൽ പ്രവേശിക്കാം.
+
+ശ്രീശുകൻ പറഞ്ഞു:— കാർത്ത്യായനീ വ്രതാവസാനത്തിൽ ശ്രീഭഗവാൻ പ്രിയഭക്തകളായ ഗോപകന്യകമാരുടെ മുമ്പിൽ പ്രകടമായി. തന്റെ ശക്തിസ്വരൂപിണിയായ മഹാമായയുടെ അനുഗ്രഹവും കൂടി ലഭിച്ച അവർക്കു് ഇനി മായാസംബന്ധമായ ആവരണം അനുയോജ്യമല്ലെന്നു് തന്തിരുവടി നിശ്ചയിച്ചു. അവരുടെ ലൗകികമായ വസ്ത്രങ്ങളോടുകൂടി ദേഹസംബന്ധമായ ലജ്ജാഭിമാനങ്ങളേയും അപഹരിച്ചിട്ടു് ആ വസ്ത്രങ്ങളെ തന്റെ ദിവ്യപ്രസാദമാക്കി മാററി തിരിച്ചുകൊടുത്തു് അവരെ ദിവ്യരാസലീലക്കു് അധികാരിണികളാക്കിത്തീർത്തു. അടുത്ത ശരത് കാലപൗർണ്ണമിയിൽ അവർക്കു തന്റെ സംഗം ലഭിക്കുമെന്നരുളിചെയ്തു. ആ അനുഗ്രഹവാണികേട്ടു് മനം തണുത്ത ഗോപികൾ ശരത് കാലത്തെ ഉത്കണ്ഠയോടുകൂടി പ്രതീക്ഷിച്ചിരുന്നു. ഗൃഹകൃത്യങ്ങളെല്ലാം ഒരു യന്ത്രമെന്നപോലെ ശരീരം നിർവ്വഹിച്ചു. പശുവിനെ കറക്കുക, ധാന്യം പൊടിക്കുക, തൈർ കലക്കുക, ഗൃഹം മെഴുകുക, പതിശുശ്രൂഷ ചെയ്യുക, കുട്ടികളെ നോക്കുക ഇത്യാദിപ്രവൃത്തികളിൽ ശരീരം വ്യാപൃതമായിരുന്നപ്പോഴും അവരുടെ ചിത്തം പ്രിയരമണനിൽ തന്നെ പറ്റിനിന്നു. പ്രാണപ്രിയന്റെ നാനാലീലകളെ അത്യനുരാഗത്തോടുകൂടി കണ്ണീരൊഴുക്കി ഗദ് ഗദ കണ്ഠത്തോടുകൂടി ഗാനം ചെയ്തുകൊണ്ടു് അവർ കാലം കഴിച്ചു. ഭഗവാന്റെ ആഹ്വാനം എപ്പോഴുണ്ടാകുമെന്നു് ചെവിയോർത്തുകൊണ്ടു് അവർ നീണ്ട നീണ്ട ദിവസങ്ങളെ തള്ളി നീക്കി.
+
+ശരത് കാല പൗർണ്ണമിയായ ആ മഹാരാത്രിയും സമാഗതമായി. 'ആ ദിവ്യരാത്രിയിൽ തന്റെ പ്രിയതമകളായ ഗോപരമണികളുമായി അലൗകികമായ “രാസക്രീഡ” ചെയ്യണമെന്നു്' ശ്രീഭഗവാൻ സങ്കല്പിച്ചു. ഭഗവാന്റെ അംശജനായ ചന്ദ്രൻ തന്റെ വംശജനായ ആ മഹാപ്രഭുവിന്റെ ഇംഗിതമറിഞ്ഞു പൂർവ്വദിക്കാകുന്ന സ്വപ്രിയതമയുടെ മുഖത്തിൽ, ഉദയരാഗമാകുന്ന കുങ്കുമത്തെ, ശീതളകിരണങ്ങളാകുന്ന കൈകളാൽ കരിയിട്ട കൊണ്ടു് ഉദിച്ചുയർന്നു. പകലവന്റെ ആതപത്താൽ തപിച്ച ചരാചരങ്ങളെ ചന്ദ്രൻ തന്റെ അമൃത കിരണങ്ങളാൽ തലോടി തണുപ്പിച്ചു. വൃന്ദാവനത്തിൽ പ്രവേശിച്ച പ്രഭു പൂർണ്ണചന്ദ്രനെ ഒന്നു കടാക്ഷിച്ചു. എന്തെന്നാൽ ആ ചന്ദ്രമണ്ഡലം ചന്ദ്രമുഖിയും ശ്യാമസുന്ദരന്റെ ലീലാസഖിയുമായ സാക്ഷാത് ശ്രീരാധാദേവിയെ ഓർമ്മിപ്പിച്ചു. വസന്തലക്ഷ്മീ ലീലാലോലനായ പ്രഭുദേവന്റെ ആഗമനോത്സവത്തിൽ തന്റെ സമസ്തവർണ്ണോപഹാരങ്ങളെക്കൊണ്ടു് ആ വൃന്ദാവന പ്രകൃതിയെ ഏററവും നന്നായി അലങ്കരിച്ചു. സർവ്വത്ര വനകുഞ്ജങ്ങളിലും വനരാജികളിലും നാനാവരവർണ്ണസുരഭില കുസുമങ്ങൾ വികസിച്ചു നിൽക്കയാൽ വൃന്ദാവനം ലോകോത്തരമായ മഹിമയെ ആർജ്ജിച്ചു വിരാജിച്ചു. ആ ശരത് സന്ധ്യയിൽ ഉത്ഫുല്ലങ്ങളായ മല്ലികാ കുസുമങ്ങൾ ചന്ദ്രകിരണങ്ങളാൽ പ്രകാശിതങ്ങളായി, സൗന്ദര്യാതിശയത്തേയും സൗരഭ്യപൂരത്തേയും ചൊരിഞ്ഞു നില്ക്കുന്നതിനെക്കണ്ടു്, പ്രമോദോത്ഫുല്ലമാനസനായ ഭഗവാൻ മുരളീധരൻ തന്റെ യോഗമായയെ സമാശ്രയിച്ചു കൊണ്ടു്, ഗോപരമണികളുമായി ക്രീഡിക്കാൻ നിശ്ചയിച്ചു.
+
+അവർ മാത്രം കേൾക്കേണ്ടയെന്നു സങ്കല്പിച്ചു് അവരുടെ മനസ്സിനെ അപഹരിക്കത്തക്കവിധം 'ക്ലീം' എന്ന കാമരാജമന്ത്രത്തെ അവ്യക്തമധുരമായി വേണുവിൽക്കൂടി പ്രസരിപ്പിച്ചു. പ്രേമോദ്ദീപകമായ ആ അദ്ഭുത ഗീതത്തെ ഗോപികൾ സ്പഷ്ടമായി കേട്ടു. തൽക്ഷണം ആ മഹാഭാഗകളുടെ ചിത്തം തങ്ങളുടെ പ്രാണപ്രിയനായ ശ്രീഭഗവാന്റെ പാദകമലങ്ങളിൽ എത്തിച്ചേർന്നു. പിന്നെ അരക്ഷണം പോലും വീട്ടിലിരിക്കുവാൻ അവർക്കു കഴിഞ്ഞില്ല. തങ്ങൾ ചെയ്തുകൊണ്ടിരുന്ന കൃത്യങ്ങൾ അവിടെ നിലച്ചു പോയി. പശുവിനെ കറന്നു കൊണ്ടിരുന്നവരും, പാൽ കാച്ചിക്കൊണ്ടിരുന്നവരും, ആഹാരം പാകം ചെയ്തുകൊണ്ടിരുന്നവരും, വിളമ്പിക്കൊണ്ടിരുന്നവരും, കുട്ടികൾക്കു് സ്തന്യം കൊടുത്തുകൊണ്ടിരുന്നവരും, ഭർതൃശുശ്രൂഷ ചെയ്തുകൊണ്ടിരുന്നവരും, ഭക്ഷണം കഴിച്ചുകൊണ്ടിരുന്നവരും, ദേഹശുദ്ധി, സുഗന്ധലേപനം, കണ്ണെഴുതുക, എന്നിവ ചെയ്തുകൊണ്ടിരുന്നവരും അതാതു വ്യാപാരങ്ങളെ അവിടവിടെയിട്ടു. ഒന്നും മുഴുവനാക്കാൻ നിന്നില്ല. കയ്യിൽ കിട്ടിയ വസ്ത്രങ്ങളേയും ആഭരണങ്ങളേയും എങ്ങനെയെല്ലാമോ വാരിയണിഞ്ഞു. ഒന്നും വേണ്ടതുപോലെ ചെയ്യാൻ അവർക്കു സമയമില്ല. കൂട്ടുകാരികളെ വിളിച്ചുകൂട്ടാനും നിന്നില്ല. എത്രയും വേഗം കൃഷ്ണസമീപമെത്തണം. രാത്രിയാണു്, വനപ്രദേശമാണു് എന്നൊന്നും ചിന്തിക്കാതെ ഒററയൊററയ്ക്കായി ഇറങ്ങിത്തിരിച്ചു. അസമയത്തുള്ള പുറപ്പാടിനെ സ്വജനങ്ങൾ തടഞ്ഞിട്ടും അവർ കൂട്ടാക്കിയില്ല. ധിക്കാരം കൊണ്ടല്ല, തീവ്രമായ പ്രേമപ്രവാഹത്താൽ അവർ ഭഗവാനെ ഒഴിച്ചുള്ളതെല്ലാം മറന്നു. ഉടനെ കൃഷ്ണസമീപമെത്തിയില്ലെങ്കിൽ പ്രിയതമൻ എവിടേക്കെങ്കിലും പോയ് ക്കളയുമോ എന്നവർ ഭയപ്പെട്ടു. അവരുടെ മനസ്സു് നാദമാർഗ്ഗത്തിൽ കൂടി കൃഷ്ണസമീപം മുൻകൂട്ടി എത്തിക്കഴിഞ്ഞിരുന്നു. മനസ്സിന്റെ പുറകെ ശരീരവും മാർഗ്ഗഭ്രംശമൊന്നും കൂടാതെ ഭഗവത്സമീപമെത്തി. ചില ഗോപികളെ ബന്ധുക്കൾ വീട്ടിൽനിന്നും പുറത്തേക്കു വിടാതെ തടഞ്ഞു നിർത്തി. പ്രിയവിരഹതാപാഗ്നിയിൽ അവരുടെ സകല പാപങ്ങളും നശിച്ചു. കണ്ണടച്ചു് കൃഷ്ണനെ ദൃഢഭാവനയോടുകൂടി ധ്യാനിച്ചു. ധ്യാനബലത്താൽ കൃഷ്ണന്റെ മനോഹര രൂപം ഹൃദയത്തിൽ പ്രകാശിച്ചു കണ്ടു. ആ മോഹനാകാരത്തെ ഗാഢാശ്ലേഷം ചെയ്തു് അവർ നിർവൃതിയടഞ്ഞു. അതോടുകൂടി പ്രാരബ്ധ ശരീരത്തെ ഉപേക്ഷിച്ചു് അവർ കൃഷ്ണനിൽ ഐക്യം പ്രാപിച്ചു.
+
+ഇവിടെ പാമരന്മാർക്കുണ്ടാകാവുന്ന സംശയം തീർക്കാൻ പരീക്ഷിത്തു ചോദിച്ചു: “മഹർഷേ! ഗോപികൾ ശ്രീകൃഷ്ണനെ പരബ്രഹ്മ വസ്തുവാണെന്നറിഞ്ഞില്ല. തങ്ങളെ ആനന്ദിപ്പിക്കുവാൻ സമർത്ഥനായ കാന്തനാണെന്നു മാത്രമാണല്ലോ അവർ വിചാരിച്ചതു്; ആ സ്ഥിതിക്കു് അവർക്കു് ത്രിഗുണമയമായ സംസാരത്തിൽ നിന്നും എങ്ങനെ മോചനം സംഭവിച്ചു? ഈ സംശയം തീർത്തുതരേണമേ."
+
+ശ്രീശുകൻ പറഞ്ഞു:— ഭഗവാനെ നിരന്തരം ദ്വേഷിച്ച ശിശുപാലൻ സായൂജ്യം പ്രാപിച്ച കഥ പറഞ്ഞു തന്നതോർമ്മയില്ലേ? ദ്വേഷിക്കുന്നവർപോലും സദ് ഗതികിട്ടുമെങ്കിൽ അധോക്ഷജന്റെ പ്രേയസികളുടെ കാര്യം പിന്നെ പറയണമോ? കാഷ്ഠങ്ങളിൽ മറഞ്ഞിരിക്കുന്ന അഗ്നിയെ പ്രകാശിപ്പിക്കാൻ മഥനം ആവശ്യമാണു്. എന്നാൽ പ്രത്യക്ഷമായി ജ്വലിക്കുന്ന അഗ്നിയെ, അഗ്നിയാണെന്നറിയാതെ തൊട്ടാലും ചൂടു് അനുഭവമാകും. സർവ്വാന്തര്യാമിയായ സച്ചിദാനന്ദ വസ്തു, തന്നെ സമീപിക്കുന്ന ജീവരാശികൾക്കെല്ലാം തന്റെ പരമപദം കൊടുക്കണമെന്നുള്ള കാരുണ്യാതിരേകത്താൽ സാക്ഷാത് ശ്രീകൃഷ്ണനായി ഭൂമിയിൽ അവതരിച്ചു് പണ്ഡിത പാമരൻ, ശത്രുമിത്രം, ഇത്യാദി ഭേദമന്യേ സകലർക്കും സുലഭനായി ഭവിച്ചു. ആ പരമപുരുഷനോടു് അറിഞ്ഞോ അറിയാതെയോ, കാമം, ക്രോധം, ഭയം, സ്നേഹം, ഐക്യം, സൗഹൃദം ഇത്യാദി ഏതുഭാവത്തിലെങ്കിലും സംബന്ധിക്കാൻ കഴിഞ്ഞാൽ സംസാരമോചനം ഹസ്തലബ്ധം തന്നെ, സംശയമില്ല. രാജൻ! ഗർഭത്തിൽ വച്ചു തന്നെ ഭഗവദ്ദർശനവും അനുഗ്രഹവും ലഭിക്കാൻ ഭാഗ്യം സിദ്ധിച്ച അങ്ങയ്ക്കു് ഇക്കാര്യത്തിൽ ആശ്ചര്യം തോന്നേണ്ട കാര്യമില്ലല്ലോ. തന്തിരുവടിയുടെ സങ്കല്പമാത്രത്താൽ ഈലോകം മുഴുവനും മോചിക്കപ്പെടും, നിശ്ചയം. തുടർന്നുള്ള കഥ ശ്രദ്ധിച്ചു് കേട്ടു കൊള്ളുക.
+
+ശ്രീഭഗവാന്റെ അന്തരംഗ ഭക്തകളായ ഗോപികളെല്ലാം വന്നുകഴിഞ്ഞു. എല്ലാവരും പ്രിയതമ സംഗത്തിനായി തുടിക്കുന്നു. അവരുടെ പരിശുദ്ധഭാവത്തെക്കുറിച്ചു് സർവ്വാന്തര്യാമിക്കു് ഒട്ടും തന്നെ സംശയമില്ല. അവരുടെ ചിരാഭിലാഷത്തെ സാധിച്ചുകൊടുക്കാൻ തന്നെ നിശ്ചയിച്ചു കഴിഞ്ഞു. തന്തിരുവടി ആകാശത്തിലേക്കുനോക്കി. തന്റെ ലീലകളൊന്നും വിടാതെ അപ്പോഴപ്പോൾ കണ്ടാനന്ദിക്കുന്ന ദേവന്മാരും യോഗീശ്വരന്മാരും വന്നു നിറഞ്ഞു കഴിഞ്ഞു. അവർക്കു തന്റെ പ്രിയതമകളുടെ അത്യുന്നതനിലയെ കാണിച്ചുകൊടുക്കണം. ഗോപികളുടെ നിലയെത്താത്തവർക്കു് അനുഷ്ഠേയമായ ധർമ്മമെന്തെന്നും ലോകത്തെ അറിയിക്കണം. അതിനായി പ്രഭു ഭാവശരീരിണികളായ ഗോപികളോടു് അവർക്കാവശ്യമില്ലാത്തതായ ധർമ്മപ്രസംഗം നടത്തി. “ഹേ മഹാഭാഗവതികളേ! നിങ്ങൾക്കുസ്വാഗതം. നിങ്ങളുടെ ഹിതമെന്താണെന്നു പറയുവിൻ. അതു സാധിപ്പിക്കാൻ ഞാൻ കാത്തിരിക്കുകയാണു്. പക്ഷെ ഈ അസമയത്തു് നിങ്ങളെന്തിനു ബദ്ധപ്പെട്ടു വന്നു? വ്രജത്തിലെല്ലാവർക്കും ക്ഷേമം തന്നെയല്ലേ? അതോ എന്തെങ്കിലും അനിഷ്ടം സംഭവിച്ചുവോ? (ഗോപികൾ അതിനുത്തരമൊന്നും പറയാതെ ലജ്ജിച്ചു നിൽക്കുന്നതുകണ്ടു് ഭഗവാൻ തുടർന്നു. ഏതായാലും നിങ്ങൾ ഇവിടെ നിൽക്കുന്നതാപത്താണു്. ദുഷ്ടമൃഗങ്ങൾ യഥേഷ്ടം വിഹരിക്കുന്ന ഈ വനത്തിൽ സ്ത്രീകളായ നിങ്ങൾ രാത്രിയിൽ നിൽക്കരുതു്. എത്രയും വേഗം തിരിച്ചു പോകുവിൻ. ഇപ്പോൾ തന്നെ നിങ്ങളെ കാണാതെ ഭീതരായ ബന്ധുജനങ്ങൾ തേടി പുറപ്പെട്ടിരിക്കും. അവരെ വ്യസനിപ്പിക്കരുതു്. ഒരു പക്ഷേ പൂർണ്ണചന്ദ്രികാശോഭിതമായ വൃന്ദാവനത്തേയും യമുനാനദിയേയും കാണാനാഗ്രഹിച്ചു വന്നതാണോ? എങ്കിൽ കണ്ടുകഴിഞ്ഞുവല്ലോ. ഇനി മടങ്ങിപ്പോകാൻ വൈകേണ്ട. അല്ലയോ പതിവ്രതകളേ! നിങ്ങളുടെ ധർമ്മമെന്തെന്നു ഞാൻ പറഞ്ഞു തരണമോ? വേഗം വ്രജത്തിൽ പോയി പതികളെ ശുശ്രൂഷിക്കുവിൻ, കരയുന്ന ശിശുക്കൾക്കു സ്തന്യം കൊടുക്കുവിൻ, വത്സങ്ങളേയും കുടിപ്പിച്ചു് പശുക്കളെ കറക്കുവിൻ.
+
+അഥവാ എന്നിലുള്ള അതിസ്നേഹത്താൽ അപഹൃതചിത്തരായിവന്നതായിരിക്കുമോ? എങ്കിൽ അതും യുക്തം തന്നെ. സകലപ്രാണികൾക്കും ഞാൻ പ്രീതിഭാജനമാണു്. പതിവ്രതകളായ നിങ്ങൾക്കു് എന്നിൽ പരിശുദ്ധസ്നേഹമാണുള്ളതെന്നു് എനിക്കു നല്ലപോലെ അറിയാം. കല്യാണികളായ നിങ്ങളുടെ പരമധർമ്മം നിഷ്കപടമായ ഭർത്തൃശുശ്രൂഷയും അവരുടെ ബന്ധുക്കളുടേയും സന്താനങ്ങളുടേയും പോഷണവുമാകുന്നു. ഭർത്താവു് എത്രതന്നെ ദുശ്ശീലനോ, ദുർഭഗനോ, വൃദ്ധനോ, ജഡനോ, രോഗിയോ, ദരിദ്രനോ ആയാലും പതിവ്രതയാൽ ഉപേക്ഷ്യനല്ല. മഹാപാപിഷ്ഠനാണെങ്കിൽ മാത്രം സമീപിക്കാതെ ദൂരയിരുന്നുസേവിക്കണം. എന്നാലും അന്യനെ സ്വീകരിക്കരുതു്. പരപുരുഷബന്ധം ഇഹത്തിൽ ദുഷ്കീർത്തികരവും നിന്ദിതവും ഭയാവഹവുമാണു്. മരണശേഷം നരകപ്രാപ്തിക്കിടയാക്കും. സർവ്വഭൂതസുഹൃത്തായ എന്റെ സേവയ്ക്കു് ഗൃഹവാസം പ്രതിബന്ധമാണെന്നു നിങ്ങൾ വിചാരിക്കുകയും എന്നിൽ പ്രേമഭക്തി വർദ്ധിക്കണമെന്നാഗ്രഹിക്കുകയും ചെയ്യുന്നുവെങ്കിൽ, എന്റെ ഗുണങ്ങളേയും ലീലകളേയും നിരന്തരം കേൾക്കുക, എന്നെ വല്ലപ്പോഴും ദർശിക്കുക, എന്റെ സ്വരൂപത്തെ ധ്യാനിക്കുക, എന്നെ കീർത്തിക്കുക, എന്നിവയാണു് വേണ്ടതു്. എപ്പോഴും എന്നോടൊന്നിച്ചിരിക്കുന്നതുകൊണ്ടു മാത്രം അത്രതന്നെ ഭക്തി ഉറയ്ക്കുകയില്ല. അതിനാൽ ഇനി ഒട്ടും കാലം കളയാതെ മടങ്ങിപ്പോകുവിൻ.”
+
+ഇവിടെ സാധാരണ സ്ത്രീധർമ്മത്തെയാണു് ഭഗവാൻ ഉപദേശിച്ചതു്. ഗൃഹാദികളിൽ ദൃഢവൈരാഗ്യം വരാത്തവർക്കു് അതാവശ്യവുമാണു്. ഇതേ ഉപദേശം കേട്ടപ്പോൾ വിപ്രപത്നിമാർ മടങ്ങിപ്പോയതാണു്. പക്ഷെ ഗോപികളുടെ അവസ്ഥയതല്ലല്ലോ. ഭഗവാന്റെ ഓരോവാക്കും അവരുടെ പ്രേമം നിറഞ്ഞ ഹൃദയത്തെ മുറിപ്പെടുത്തി. അവരുടെ സകലപങ്ങളുമെല്ലാം ഛിന്നഭിന്നമായി. തങ്ങളുടെ ജീവനെ രക്ഷിക്കാൻ ഏഴുദിവസം മുഴുവൻ പർവ്വതം ചുമന്നു നിന്ന ഗോവിന്ദനാണോ ഇങ്ങനെ പറയുന്നതു്? അവർ ഇതു തീരെ പ്രതീക്ഷിച്ചില്ല. “കഷ്ടം! നമ്മുടെ എല്ലാമായ നാഥൻ ഇത്ര കഠിനമായി സംസാരിക്കുന്നുവല്ലോ. ഇനി നാമെന്തു ചെയ്യാനാണു്? പ്രിയനെ സേവിച്ചു പ്രസാദിപ്പിക്കുവാൻ ശ്രമിക്കുകയോ, അതോ ശരിയായി നാലു വാക്കു മറുപടി കൊടുത്തിട്ടു് എവിടെയെങ്കിലും പോയി മരിക്കുകയോ, അതോ ഇവിടെ പ്രിയതമന്റെ കൺമുമ്പിൽ തന്നെ പ്രാണൻ കളയുകയോ വേണ്ടതു്. ദൈവമേ! ഒന്നും തോന്നുന്നില്ലല്ലോ”, നീറുന്ന ഉള്ളത്തിൽനിന്നും ഒരു ദീർഘശ്വാസം പുറപ്പെട്ടു. കോമളാധരങ്ങൾ ഉണങ്ങി വരണ്ടു. കണ്ണുനീർ ധാരധാരയായി പ്രവഹിച്ചു കൺമഷിയെ കലക്കിക്കൊണ്ടു് കുചങ്ങളിൽ പതിച്ചു് കുങ്കുമത്തെ മായ്ച്ചു. ഇടത്തെ കാൽപെരുവിരൽ നഖംകൊണ്ടു് ഭൂമിയെ കീറിക്കൊണ്ടുനിന്നു. അതുകണ്ടാൽ 'ഭൂമീദേവീ! ഭർത്താവു തിരസ്കരിച്ചപ്പോൾ സീതാദേവിക്കു് അവിടുത്തെ അന്തർഭാഗത്തിൽ സ്ഥലം കൊടുത്തതുപോലെ ജീവിതാശ നഷ്ടപ്പെട്ട ഞങ്ങൾക്കു അല്പം സ്ഥലം തരണേ' എന്നു പ്രാർത്ഥിക്കുന്നതു പോലെ തോന്നും. പ്രിയതമപ്രാപ്തിക്കായി ഇഹപരസുഖങ്ങളെല്ലാം ത്യജിച്ച തങ്ങളോടു് അല്പവും സ്നേഹമില്ലാത്തവനെപ്പോലെയാണല്ലോ സംസാരിക്കുന്നതെന്നോർത്തപ്പോൾ കൃഷ്ണനിൽ അത്യനുരക്തകളായ അവർക്കു ദുഃഖാധിക്യത്താൽ കോപവും തോന്നി. എത്രനേരം ഒന്നും മിണ്ടാതെ നിൽക്കും? അവർ തൊണ്ടയിടറിക്കൊണ്ടു പറഞ്ഞു:— “ഹേ വിഭോ! ഇതു കുറെ കഠിനമായിപ്പോയി. ഞങ്ങളോടു് ഇത്ര ക്രൂരമായി സംസാരിക്കാമോ? സർവ്വ വിഷയങ്ങളേയും ദൂരെ ത്യജിച്ചു് ഈ പാദമൂലങ്ങളെ മാത്രം സമാശ്രയിച്ചവരല്ലേ ഞങ്ങൾ? അവിടുത്തേക്കു ഞങ്ങളെ എന്തുവേണമെങ്കിലും ചെയ്യാം. പക്ഷെ ഉപേക്ഷിക്കാമോ? ശ്രീഹരി ശരണാഗതരെ കൈവെടിയുന്നവനല്ലെന്നാണല്ലോ ഞങ്ങൾ ധരിച്ചിട്ടുള്ളതു്. അതു ശരിയല്ലെന്നോ?
+
+നാഥ! ഞങ്ങളോടു പതിവ്രതാധർമ്മമുപദേശിച്ചുവല്ലോ. ധർമ്മരക്ഷകനായ അവിടുത്തേക്കു അതു യോജിച്ചതുതന്നെ. ഞങ്ങളാവട്ടെ ഈ ഉപദേശമനുസരിച്ചു തന്നെയാണു് വന്നിട്ടുള്ളതു്. ശരീരമെടുത്തവർക്കെല്ലാം, സ്ത്രീപുരുഷഭേദമന്യേ, പ്രിയതമനും ഹിതകാരിയും ആത്മാവും അവിടുന്നുതന്നെയാണെന്നു ഞങ്ങൾക്കറിയാം. നിന്തിരുവടിയെ ഇത്രയും കാലം ഭജിച്ചതിന്റെ ഫലമായി ഒരു കാര്യം ഞങ്ങൾക്കു വ്യക്തമായി മനസ്സിലായി. അതായതു് രക്തമാംസസമാഹാരമായ ഒരു ദേഹം അതുപോലെയുള്ള മറ്റൊരു ദേഹത്തിനു പതിയാകുന്നില്ല. ശരീരത്തെ സ്നേഹിക്കുന്നതായി കാണുന്നുണ്ടല്ലോ എന്നാണെങ്കിൽ അതിനുകാരണം സർവ്വശരീരങ്ങളിലും അന്തരാത്മാവായി നിന്തിരുവടി വസിക്കുന്നു എന്നുള്ളതാണു്. ആത്മാവായ അവിടുത്തെ അഭാവത്തിൽ ശരീരം ജഡം തന്നെ. ഉടനെ ദഹിപ്പിക്കണം. അപ്രകാരമുള്ള ജഡശരീരങ്ങളെ സേവിക്കാനാണോ ഞങ്ങളെ ഉപദേശിക്കുന്നതു്?
+
+ഹേ അരവിന്ദാക്ഷ! ഞങ്ങൾ ചിരകാലമായി നിന്തിരുവടിയിൽ വച്ചു വളർത്തിയ ദൃഢമായ സ്നേഹപാശത്തെ ഛേദിച്ചുകളയരുതേ! ആ അവസ്ഥ ഞങ്ങൾക്കു് ചിന്തിക്കാൻ പോലും വയ്യ. ഞങ്ങളുടെ ചിത്തത്തെ സുഖസ്വരൂപനായ നിന്തിരുവടി സമ്പൂർണ്ണമായി അപഹരിച്ചു വച്ചിരിക്കുകയാണു്. മനസ്സു നഷ്ടപ്പെട്ട ഞങ്ങൾ മനസ്സിന്റെ നിയന്ത്രണത്തിലുള്ള ഇന്ദ്രിയങ്ങളെക്കൊണ്ടു് എങ്ങനെ ഗൃഹകൃത്യങ്ങൾ ചെയ്യും? ഇപ്പോൾ ഞങ്ങളോടു പോകാൻ പറയുന്നുവല്ലോ. ഞങ്ങളുടെ പാദങ്ങൾ ഇവിടെ നിന്നും ഒരടിപോലും ചലിക്കുന്നില്ല. ഞങ്ങളെങ്ങനെ പോകും? അഥവാ ഏതെങ്കിലും വിധത്തിൽ ഗൃഹത്തിലെത്തിയാലും ഞങ്ങൾക്കെന്തു ചെയ്യാൻ കഴിയും? ഞങ്ങളുടെ ഈ സങ്കടം അവിടുന്നു കാണുന്നില്ലേ? പ്രിയസഖേ! അവിടുത്തെ മോഹനഹാസവും അമൃതകടാക്ഷവും മധുരഗാനവും ഞങ്ങളുടെ മനസ്സിൽ പ്രേമാഗ്നിയെ ഉജ്ജ്വലിപ്പിച്ചിരിക്കുന്നു. ആ അഗ്നി ഞങ്ങളെ ദഹിപ്പിക്കുകയാണു്, അവിടുത്തെ അധരാമൃതസേചനം കൊണ്ടുമാത്രമെ ആ അഗ്നി കെട്ടടങ്ങുകയുള്ളു. അല്ലെങ്കിൽ, ഞങ്ങൾ വിരഹതാപമാകുന്ന അഗ്നിയിൽ ദഹിച്ച ദേഹങ്ങളോടുകൂടിയവരായി അങ്ങയുടെ പാദകമലങ്ങളുടെ മാർഗ്ഗത്തെ ധ്യാനം കൊണ്ടു പ്രാപിച്ചുകൊള്ളാം.
+
+ഹേ അംബുജാക്ഷ! രമാദേവിക്കുപോലും ദുർലഭമായ അവിടുത്തെ ശ്രീപദപല്ലവങ്ങൾ ജീവികൾക്കു് കാണാൻ കിട്ടുന്നതാണോ? അകിഞ്ചനന്മാരുടെ ധനമായ ഈ ശ്രീചരണസ്പർശം യശോദയുടെ സൂതികാ ഗൃഹത്തിൽവച്ചു് എന്നു് ഞങ്ങൾക്കു ലഭിച്ചുവോ, അന്നുമുതൽ അന്യപുരുഷന്മാരുടെ മുമ്പിൽ ഒരുക്ഷണം പോലും നിൽക്കുവാൻ ഞങ്ങൾക്കു കഴിയുന്നില്ല. ഞങ്ങളെന്തുചെയ്യട്ടെ! ഹേ വ്രജേശ്വര! മാംസഭാരമികളായവർ കാമിക്കുന്ന പ്രാകൃതരതിസുഖത്തെ കാംക്ഷിച്ചു വന്നവരാണു് ഞങ്ങളെന്നു സർവ്വസാക്ഷിയായ നിന്തിരുവടി വിചാരിക്കുകയില്ലല്ലോ? പ്രഭോ! ഞങ്ങളെത്തന്നെ ഉപേക്ഷിച്ചിരിക്കാമോന്നുവെന്നു അവിടുന്നറിയുന്നില്ലേ? യാതൊരു ശ്രീദേവിയുടെ കടാക്ഷലേശത്തിനായി സകലദേവന്മാരും പാടുപെടുന്നുവോ, ആ ശ്രീദേവിക്കു് അവിടുന്നു തിരുമാറിൽ സ്ഥാനം കൊടുത്തിട്ടും തൃപ്തയാകാതെ അവിടുത്തെ അന്തരംഗ ഭക്തന്മാർ പ്രേമപൂർവ്വമാശ്രയിക്കുന്ന ശ്രീപാദരേണുവിനെ തുളസിയോടു ചേർന്നു കാമിക്കുന്നു. അത്രത്തോളം സൗഭാഗ്യനികേതനമായ അവിടുത്തെ പാദധൂളിയെ ശരണം പ്രാപിക്കുവാനാണു് ഞങ്ങൾ വന്നതു്. ഹേ സന്താപനാശന! അവിടുത്തെ പാദസേവയ്ക്കു വിഘ്നങ്ങളായ ഗൃഹ, പതി, പുത്രാദികളെയെല്ലാമുപേക്ഷിച്ചു വന്നിരിക്കുന്ന ഞങ്ങളെ ദാസികളായി സ്വീകരിക്കേണമേ. ഹേ പുരുഷഭൂഷണ! നിന്തിരുവടിയുടെ സുന്ദരരൂപവും മോഹന മന്ദസ്മിതവും പ്രേമ കടാക്ഷങ്ങളും കണ്ടു കണ്ടു് ഞങ്ങളുടെ മനസ്സു് വർദ്ധിച്ച പ്രേമം മൂലം തപിക്കുകയാണു്. അവിടുത്തെ ദാസ്യം ലഭിച്ചാൽ മാത്രമെ ഞങ്ങളുടെ താപം തീരുകയുള്ളു. ഹേ ഭുവനസുന്ദര! ഞങ്ങൾ നിന്തിരുവടി ഇവിടെ ഉപദേശിച്ച സ്വധർമ്മങ്ങളെ ഒരു കാലത്തു് നിഷ്ഠയോടുകൂടി പാലിച്ചവർ തന്നെയായിരുന്നു. അവയുടെ പരമഫലമായ അവിടുത്തെ ദർശനം ലഭിച്ച അന്നുമുതൽ ധർമ്മസാധനകളിൽ മനസ്സു നില്ലാതെയായി. അതു ഞങ്ങളുടെ കുറ്റമല്ല. കണ്ഠലകാന്തിയാൽ പ്രശോഭിക്കുന്ന കവിൾത്തടങ്ങളോടും അമൃതിന്റെ ഉറവിടമായ അധരങ്ങളോടും മനോഹര മന്ദഹാസ കടാക്ഷത്തോടും കൂടിയ അവിടുത്തെ അളകാവൃതമായ തിരുമുഖത്തേയും ഭക്തന്മാർക്കു് അഭയപ്രദാനം ചെയ്യുന്ന ദീർഘ ബാഹുക്കളേയും, മഹാലക്ഷ്മിക്കു മാത്രം സ്വായത്തമായ തിരുമാറിടത്തേയും കണ്ടാനന്ദിക്കുവാൻ ഞങ്ങൾക്കു ഭാഗ്യമുണ്ടായി. അപ്രകാരമുള്ള ഈ ത്രൈലോക്യ മോഹനരൂപത്തെ കാണുകയും അദ്ഭുതസ്വര പ്രസ്താരത്തോടുകൂടി വേണുഗാനാമൃതം ആസ്വദിക്കുകയും ചെയ്തിട്ടു് മോഹിച്ചു പോകാത്തവർ ആരെങ്കിലും ഈ മൂന്നു ലോകങ്ങളിലും കാണുമോ? മനുഷ്യർ മാത്രമോ, വിശേഷബുദ്ധിയില്ലാത്ത പശുപക്ഷിമൃഗാദികൾ പോലും ഈ ഗാനശ്രവണത്താൽ പുളകംകൊള്ളുന്നവല്ലോ. ഈ ഗോകുലത്തിലുള്ള സകല പ്രാണികളുടേയും സർവ്വസന്താപനാശത്തിനായിട്ടാണു് അവിടുത്തെ അവതാരം എന്നു വ്യക്തമാണു്. ആ സ്ഥിതിക്കു അനുശരണകളായ ഈ ദാസികളെ മാത്രം ഈ വിധം തപിപ്പിക്കാമോ? അതിനാൽ ഹേ ആത്മബന്ധോ! അവിടുത്തെ ശീതള കരാംബുജത്തെ തപ്തമായ ഞങ്ങളുടെ ചുട്ടു നീറുന്ന മാറിടങ്ങളിൽ വച്ചു് തണുപ്പിക്കേണമേ! ദാസികളായ ഞങ്ങളെ ഉപേക്ഷിക്കരുതേ!' ഗോപികളുടെ ഈ വാക്കുകളിൽ കൂടി ശ്രീ ശ്യാമസുന്ദരൻ അവരുടെ അത്യുച്ചഭാവത്തെ ലോകത്തിനു വെളിപ്പെടുത്തി.
+
+പ്രേയസികൾ ഹൃദയവേദനയോടുകൂടി വളരെ കേണപേക്ഷിച്ചപ്പോൾ കരുണാസമുദ്രമായ നന്ദകിശോരൻ പിന്നെയൊരാൾ തടസ്ഥവും പറഞ്ഞില്ല. യോഗേശ്വരേശ്വരനും സ്വാത്മാരാമനുമായ മഹാപ്രഭു ദയാമന്ദഹാസത്തോടുകൂടി അവരെ കടാക്ഷിച്ചുകൊണ്ടു് യഥേഷ്ടം രമിപ്പിക്കാനാരംഭിച്ചു. സകലചരാചരങ്ങളിലെന്നപോലെ ഗോപികളുടേയും ഹൃദയഗുഹയിൽ വസിക്കുന്ന പ്രഭു അവരുടെ ഉള്ളും പുറവും ഒരുപോലെ ആനന്ദിപ്പിച്ചു. സാധാരണക്കാർക്കു് അജ്ഞാതസ്വരൂപനായ ഭഗവാൻ ഗോപികൾക്കു ജ്ഞാതസ്വരൂപനായി ഭവിക്കയാൽ അവരുടെ സർവ്വകാമങ്ങളും ഭഗവാനിൽ പര്യവസാനിച്ചു. വാസ്തവത്തിൽ സർവ്വാന്തര്യാമിയായ ഭഗവാൻ തന്നെയാണു് എല്ലാവരേയും രമിപ്പിക്കുന്നതു്. മായാമോഹിതരായവർ ഈ രഹസ്യമറിയാതെ ഭർത്താവു് രമിപ്പിച്ചു, ഭാര്യ രമിപ്പിച്ചു, പുത്രൻ, ധനവും വിദ്യയും രമിപ്പിച്ചു എന്നെല്ലാം തെറ്റിദ്ധരിക്കുന്നു. ഗോപികളെപ്പോലെ ശ്രീകൃഷ്ണനിൽ സർവ്വസമർപ്പണം ചെയ്ത സുകൃതികൾ, ഭർത്താവു്, പുത്ര ഗൃഹധനാദികൾ എന്നീ രൂപങ്ങളിലെല്ലാം തങ്ങളെ ആനന്ദിപ്പിക്കുന്നതു് ഭഗവാൻ തന്നെയെന്ന സൂക്ഷ്മമറിയുന്നു. തന്മൂലം ഭർതൃപുത്രാദിഭാവങ്ങൾ അവരെ സംബന്ധിച്ചിടത്തോളം ഇല്ല തന്നെ.
+
+ശ്രീഭഗവാന്റെ അംഗീകാരകടാക്ഷം ലഭിച്ച ക്ഷണത്തിൽ ഗോപികളുടെ വാടിത്തളർന്നിരുന്ന മുഖകമലങ്ങൾ പെട്ടെന്നു വികസിച്ചു. അതുവരെ അനുഭവിച്ച വേദനയെല്ലാം മറന്നു. അവർ പ്രിയനെ ചുറ്റിനിന്നു. 110 കോടി ഗോപികളാകുന്ന നക്ഷത്രങ്ങളുടെ മധ്യത്തിൽ ശ്രീകൃഷ്ണചന്ദ്രൻ ശോഭിച്ചു. വൈജയന്തീമാലാധരനായ പ്രഭു അദ്ഭുതവേണുഗാനത്താൽ രമണികളെ ആനന്ദാംബുധിയിലാറാട്ടിച്ചു. ഭഗവാന്റെ രൂപസൗന്ദര്യവും ഗാനമാധുര്യവുമാസ്വദിച്ചു് ആ ഗോപസുന്ദരിമാർ മതിമറന്നാനന്ദിച്ചു. അനന്തരം എല്ലാവരും ഭഗവാനെ അനുഗമിച്ചുകൊണ്ടു് യമുനാപുളിനത്തിൽ പ്രവേശിച്ചു് സുഗന്ധ ശീതള മന്ദവായു ഏറ്റുകൊണ്ടു് കേളികൾ തുടങ്ങി.
+
+---
+
+### ദശമസ്കന്ധം — അദ്ധ്യായം 30
+
+ബാഹുപ്രസാരണം കൊണ്ടും പ്രേമപരിരംഭണംകൊണ്ടും കർണ്ണങ്ങളേയും അളകങ്ങളേയും തലോടിക്കൊണ്ടും നർമ്മാലാപംകൊണ്ടും ഭഗവാൻ വ്രജസുന്ദരികളുടെ വിശുദ്ധപ്രേമത്തെ ഉദ്ദീപിപ്പിച്ചു. ഇപ്രകാരം സർവ്വാഭീഷ്ടവരപ്രദനിൽനിന്നും വേണ്ടുവോളം സൽക്കാരമാനാദികൾ ലഭിച്ചപ്പോൾ ആ പ്രേമമയികൾക്കു്, തങ്ങൾ സ്ത്രീജന്മം സിദ്ധിച്ചവരിൽവച്ചു് ഏറ്റവും സൗഭാഗ്യവതികൾ തന്നെ എന്ന അഭിമാനമുണ്ടായി. പരിശുദ്ധിയുടെ മൂർത്തികളായ തന്റെ ഭക്തകൾക്കുണ്ടായ ആ സൗന്ദര്യമദം നീക്കി അവരെ പരമ നിഷ്കളങ്കരാക്കണമെന്നു് സങ്കല്പിച്ചു് സാക്ഷാത് കേശവൻ അവിടെത്തന്നെ അന്തർദ്ധാനം ചെയ്തു.
+
+### അദ്ധ്യായം 30
+
+[കൃഷ്ണവിരഹതത്പരരായ ഗോപസ്ത്രീകൾ, കൃഷ്ണമാനസകളായി, കൃഷ്ണവാർത്താനിരതരായി, കൃഷ്ണചേഷ്ടകളെ അനുകരിച്ചുകൊണ്ടു്, കൃഷ്ണനാകുന്ന ആത്മാവോടുകൂടിയവരായി, കൃഷ്ണഗുണങ്ങളെത്തന്നെ പാടുന്നവരായി സ്വവേദനങ്ങളെ സ്മരിച്ചില്ല.]
+
+**ഗോപികൾ ഭഗവാനെ തേടി നടക്കുന്നതു്**
+
+ശ്രീശുകൻ പറഞ്ഞു:— ശ്രീഭഗവാൻ പെട്ടെന്നന്തർദ്ധാനം ചെയ്തപ്പോൾ അനന്യനാഥകളായ ഗോപികമാർ അത്യന്തം പരിതപിച്ചു. അവർ അതു തീരെ പ്രതീക്ഷിച്ചില്ല. പ്രിയതമന്റെ ഓരോ ലീലകളും വിലാസങ്ങളും സംഭാഷണങ്ങളും മോർത്തോർത്തു് അവരുടെ മനസ്സു് നാഥനിൽ സ്തംഭിച്ചു നിന്നു. ഭാവബലത്താൽ തങ്ങളുടെ വ്യക്തിത്വത്തെ നിശ്ശേഷം മറന്നു് പ്രാണേശ്വരന്റെ ഗതി, സ്മിതം, പ്രേക്ഷണം, ഭാഷണം എന്നിവകളിൽ തന്മയത്വം പ്രാപിച്ചു് ഗോപികമാർ 'ഞാൻ കൃഷ്ണൻ ഞാൻ കൃഷ്ണൻ' എന്ന മഹാഭാവവസ്ഥയെ പ്രാപിച്ചു. ബാഹ്യബോധം വന്നപ്പോൾ വിരഹതാപം ഹൃദയത്തെ ഹേപ്പിക്കുവാൻ തുടങ്ങി. എല്ലാവരുമൊന്നിച്ചു് ഉന്മത്തകളെപ്പോലെ പ്രിയരമണന്റെ കല്യാണഗുണങ്ങളെ ഉച്ചത്തിൽ കീർത്തിച്ചുകൊണ്ടു് കാടായ കാടെല്ലാം തേടിനടന്നു. ആകാശം പോലെ സർവ്വഭൂതങ്ങളുടേയും ഉള്ളിലും പുറത്തും നിറഞ്ഞിരിക്കുന്ന മഹാപുരുഷനെ കണ്ടുവോ കണ്ടുവോ എന്നു വൃക്ഷലതാദികളോടുകൂടി ചോദിച്ചു നടന്നു. “ഹേ അശ്വത്ഥമേ, പ്ലക്ഷമേ, നൃഗ്രോധമേ! നന്ദകുമാരൻ പ്രേമഹാസ കടാക്ഷങ്ങളെക്കൊണ്ടു് ഞങ്ങളുടെ മനസ്സിനെ അപഹരിച്ചുകൊണ്ടു് പോയ്ക്കളഞ്ഞു. ആ ഹൃദയചോരനെ നിങ്ങളെങ്ങാനും കണ്ടുവോ? ഹേ കരബകമേ, അശോകമേ, നാഗമേ, പുന്നാഗമേ, ചമ്പകമേ! ഗർവ്വിഷ്ഠകളായ ഞങ്ങളുടെ അഹങ്കാരത്തെ സ്മിതമാത്രത്താൽ ഹരിച്ച രാമാനുജൻ ഈ വഴിക്കു പോയതായി കണ്ടുവോ”?
+
+ഹേ തുളസി, കല്യാണി! നീ ഗോവിന്ദചരണപ്രിയയാണല്ലോ. നിന്നെ എപ്പോഴും ധരിക്കുന്ന പ്രാണവല്ലഭനായ അച്യുതനെ നീ കണ്ടുവോ, പറയൂ. ഹേ മാലതി, മല്ലികേ, പിച്ചകമേ, യൂഥികേ! നിങ്ങളുടെ സന്തോഷം കാണുമ്പോൾ മാധവന്റെ കർസ്സർശൗര്യം ലഭിച്ചതുപോലെ തോന്നുന്നു. മുകുന്ദൻ ഏതുവഴിക്കു പോയെന്നൊന്നു പറഞ്ഞുതരുമോ? ഹേ പരോപകാരികളായ ചൂതമേ, പനസമേ, ജംബുവൃക്ഷമേ, ബില്വമേ, ബകുളമേ, കദംബമേ, നീപമേ! കൃഷ്ണൻ ഞങ്ങളുടെ മനസ്സിനെ അപഹരിച്ചു കൊണ്ടുപോയി. തന്മൂലം ശ്രദ്ധശൂന്യകളായിത്തീർന്ന ഞങ്ങൾക്കു നിങ്ങൾ കൃഷ്ണൻ പോയ മാർഗ്ഗം പറഞ്ഞുതരുമോ? ഹേ ഭൂമീദേവീ! അവിടത്തേപ്പോലെ സുകൃതിനിയാരാണു്? ശ്രീകൃഷ്ണന്റെ അംഘ്രിസ്പർശത്താൽ ഉത്സവയുക്തയായ ഭവതിയുടെ ബാലത്തൃണങ്ങളാകുന്ന രോമാഞ്ചം പുളകംകൊണ്ടു് നിവർന്നു നില്ക്കുന്നുവല്ലോ. അതു് കൃഷ്ണൻ മുമ്പു് വരാഹമൂർത്തിയായവതരിച്ചപ്പോൾ ആലിംഗനം ചെയ്തു കൊണ്ടോ, അതോ വാമനനായവതരിച്ചപ്പോഴുണ്ടായ പാദസ്പർശം കൊണ്ടോ, അതോ ഇപ്പോൾ സാക്ഷാത്തായി സിദ്ധിച്ച ശ്രീചരണസംഗംകൊണ്ടോ, പറഞ്ഞാലും. അമ്മേ! കൃഷ്ണനെ കാണാതെ ഞങ്ങൾ തളർന്നു പരവശകളായിരിക്കുകയാണു്. ഭവതിയുടെ ഏതുഭാഗത്തുകൂടിയാണു് പ്രഭു ഇപ്പോൾ സഞ്ചരിക്കുന്നതെന്നു പറഞ്ഞു തരേണമേ. ഹേ സഖി, മാൻ പേടേ! അച്യുതൻ നിങ്ങളുടെ സമീപത്തുകൂടി പോയിട്ടുണ്ടെന്നു തോന്നുന്നു. കൂടെ ഒരുപ്രിയയും ഉണ്ടായിരുന്നിരിക്കണം. കാരണം, കൃഷ്ണന്റെ ശരീരഗന്ധവും മുല്ലമാലയുടെ സൗരഭ്യവും കാന്തയുടെ കചകചമത്തോടുകൂടി ഇവിടെ വീഴുന്നുവല്ലോ. നീയെന്താണൊന്നും മിണ്ടാത്തതു്? നിനക്കും കൃഷ്ണവിരഹവേദന ബാധിച്ചുവോ? ഹേ വൃക്ഷങ്ങളേ! ഞങ്ങളുടെ പ്രിയതമൻ ഇതുവഴി വന്നുവോ? നിങ്ങൾ ഫലങ്ങളോടുകൂടി ശിരസ്സുതാഴ്ത്തി ചെയ്തു അഭിവാദനം രാമാനുജൻ സ്വീകരിച്ചില്ലെന്നുണ്ടോ? അങ്ങനെ വരാൻ വഴിയുണ്ടു്. കോമളാംഗിയായ പ്രിയയെ പ്രീതിപ്പെടുത്താൻ കുറെ ദൂരം വഹിച്ചുകൊണ്ടുപോയിരിക്കാം. അല്ലെങ്കിൽ തുളസീ സൗരഭ്യത്താൽ ആകർഷിക്കപ്പെട്ട വണ്ടുകൾ പ്രിയതമയെ ബാധിക്കാതെ താമരപ്പൂക്കൊണ്ടു വീശി നടന്നിരിക്കാം. അതിനാൽ നിങ്ങളെ കടാക്ഷിച്ചുവോ എന്നു സംശയമുണ്ടു്. ഈ വല്ലികളെ നോക്കുവിൻ. ഇവയെ ശ്രീകൃഷ്ണൻ കരണ്ണം കൊണ്ടു് സ്പർശിച്ചിട്ടുണ്ടു് നിശ്ചയം. അല്ലെങ്കിൽ ഇത്ര സ്പഷ്ടമായി ഇവ പുളകം കൊള്ളുകയില്ല.
+
+ഇപ്രകാരം കൃഷ്ണാന്വേഷണകാതരകളായി ഉന്മത്തകളെപ്പോലെ ഗോപവാനെത്തന്നെ സ്മരിച്ചും പറഞ്ഞും നടന്നുനടന്നു് ഗോപികമാർ തളർന്നു. നടക്കാൻ അശക്തകളായതിനാൽ അവിടെത്തന്നെയിരുന്നു. പ്രിയന്റെ രൂപം, ഗുണം, ലീലകൾ, മന്ദസ്മിതം, കടാക്ഷം, ഭാഷണം, വേണുഗാനം ഇവയെ മാറിമാറി ഓർമ്മിച്ചോർമ്മിച്ചു് അനന്യചിത്തകളായി വിരഹവേദന അസഹ്യമായി. ധ്യാനത്തിന്റെ തീവ്രതയിൽ അവരുടെ വ്യക്തിത്വം മാഞ്ഞുപോയി. തങ്ങൾ കൃഷ്ണൻ തന്നെയാണെന്ന ഭാവമുണ്ടായി. 'യോ യച്ഛ്രദ്ധഃ സ ഏവ സഃ' എന്ന ഗീതാവാക്യത്തെ അവർ അനർത്ഥമാക്കി. തുടർന്നു് കൃഷ്ണന്റെ ഓരോ ലീലകളെ അഭിനയിച്ചു തുടങ്ങി. കൃഷ്ണനായി നടിച്ചവൾ പൂതനയായി നടിച്ചവളുടെ സ്തന്യം പാനം ചെയ്തു. കൃഷ്ണനായി കിടന്നു കരഞ്ഞവൾ ശകടമായി ആക്രമിക്കാൻ വന്നവളെ പാദപ്രഹരംകൊണ്ടു് തവിടുപൊടിയാക്കിയതായി നടിച്ചു. തൃണാവർത്തനായി നടിച്ചവൾ കൃഷ്ണനായിരുന്നവളെ എടുത്തുകൊണ്ടോടി. ഉണ്ണികൃഷ്ണനായിട്ടഭിനയിച്ച മററൊരു ഗോപി കൈകളും കാൽമുട്ടുകളും കുത്തി ചിലമ്പുകളെ ശബ്ദിപ്പിച്ചുകൊണ്ടു് ഇഴഞ്ഞുനടന്നു. രണ്ടുഗോപികമാർ ശ്രീകൃഷ്ണനും ബലരാമനുമായി. ചിലഗോപികമാർ ഗോപന്മാരായി. വേറെ ചിലർ പശുക്കുട്ടികളായി. അവർ പലവിധത്തിലുള്ള ബാലലീലകളാടി. അപ്പോൾ ഒരുവൾ വത്സാസുരനായി നടിച്ചുവന്നു. അവളെ കൃഷ്ണനായവൾ ഹനിച്ചതായി നടിച്ചു. അതുപോലെ ബകാസുരനായി വന്നവളേയും കൃഷ്ണനായി വന്നവൾ ഹനിച്ചതായി നടിച്ചു. വത്സങ്ങളായഭിനയിച്ചവർ കൃഷ്ണരാമന്മാരെ വിട്ടു ദൂരെ പോയതായി നടിച്ചു. അപ്പോൾ കൃഷ്ണനായിവന്ന ഗോപി വേണുഗാനത്താലെന്നപോലെ അവരെ അരികത്തു വരുത്തി. എല്ലാവരും ഒത്തുചേർന്നു് ആടിയും പാടിയും തമ്മിൽത്തല്ലിയും കളിച്ചു. ചിലർ നോക്കിനിന്നു് അഭിനന്ദിച്ചു. ഒരത്തി ഒരു ഗോപികയുടെ കൈകൊണ്ടുപിടിച്ചു് ‘സഖികളേ! കൃഷ്ണനായ എന്റെ മനോഹരഗതിവിലാസം നോക്കുവിൻ’ എന്നു് ആഹ്വാനം ചെയ്തു. കൃഷ്ണനായി ഒരുവൾ ‘വ്രജവാസികളേ! നിങ്ങളുടെ ഈ ഘോരവർഷത്തേയും കൊടുങ്കാറ്റിനേയും ഭയപ്പെടേണ്ട. രക്ഷകനായി ഞാനുണ്ടു്. ഈ പർവ്വതത്തിന്റെ കീഴിൽ വന്നു സുഖമായിരുന്നുകൊൾവിൻ’ എന്നു പറഞ്ഞു് ഉത്തരീയം ചുററി ഇടതു കൈകൊണ്ടുയർത്തിപ്പിടിച്ചു് ഗോവർദ്ധനോദ്ധാരണമേന്തിനയിച്ചു. കൃഷ്ണനായി അഭിനയിച്ച ഒരു ഗോപി കാളീയനായി നടിച്ച മററൊരുവളുടെ ശിരസ്സിനെ ആക്രമിച്ചിട്ടു് ‘ദുഷ്ടസർപ്പമേ! ജീവനും കൊണ്ടു് ദൂരെ പോയ്ക്കൊൾക. അല്ലെങ്കിൽ ഖലന്മാരെ അടക്കുന്ന ഞാൻ നിന്നെ ശിക്ഷിക്കും’ എന്നു പറഞ്ഞു. ഒരു ഗോപി ‘ഗോപന്മാരേ! ഘോരദാവാഗ്നി ഇതാ വന്നു കഴിഞ്ഞു. എല്ലാവരും വേഗം കണ്ണടച്ചുകൊൾവിൻ. ഞാൻ നിഷ്പ്രയാസം നിങ്ങളുടെ വ്യസനം തീർക്കുന്നുണ്ടു്’ എന്നു പറഞ്ഞു. ഒരു യുവതി കൃഷ്ണനും ഒരുവൾ യശോദയും മററൊരുവൾ ഉരലുമായി. യശോദ വികൃതിയായ കൃഷ്ണനെ കയ്യിലുള്ള പൂമാലകൊണ്ടു് ഉരലോട് ചേർത്തു കെട്ടി. കൃഷ്ണൻ പേടിച്ചവനെപ്പോലെ മുഖം പൊത്തിക്കൊണ്ടു് കരഞ്ഞു.
+
+ഇങ്ങനെ കുറെ സമയം കഴിച്ചശേഷം അവർ വീണ്ടും ഭഗവാനെ അന്വേഷിച്ചുനടന്നു. അപ്പോൾ പരമാത്മാവിന്റെ തൃക്കാലടികൾ ഭൂമിയിൽ തെളിഞ്ഞുകണ്ടു. ആ ദൃശ്യം അവരെ ആവേശം കൊള്ളിച്ചു. ‘ഈ പാദമുദ്രകൾ ഉദാരചരിതനായ നന്ദകുമാരന്റെ തന്നെ, സംശയമില്ല. കണ്ടില്ലേ ധ്വജം, താമര, വജ്രം, അങ്കുശം, യവം, സ്വസ്തികം, ധനുസ്സ്, അമൃതകലശം, അർദ്ധചന്ദ്രരേഖ, മത്സ്യം, ഗോഷ്പദം, മുതലായ രേഖകൾ തെളിഞ്ഞു കാണുന്നതു്?’ ഇങ്ങനെ നോക്കി നോക്കി കൃഷ്ണദർശനം ഉടനെ ലഭിക്കുമെന്ന ആശയോടുകൂടി നടന്നപ്പോൾ ഭഗവാന്റെ ശ്രീപാദമുദ്രകളുടെ ഇടയ്ക്കു് ഒരു സ്ത്രീയുടെ കാലടിയും കാണാറായി. അതുകണ്ടപ്പോൾ അവർ സപത്നീഭാവം നടിച്ചുകൊണ്ടു പറഞ്ഞു: “നന്ദകുമാരന്റെ തോളിൽ കൈവച്ചുകൊണ്ടു് കൂടെ സഞ്ചരിക്കുന്നവൾ ആരായിരിക്കാം. ആരായാലും അവൾ ഭക്തോത്തമ വരപ്രദനായ ശ്രീഹരിയെ വഴിപോലെ ആരാധിച്ചവൾ തന്നെ, നിശ്ചയം. അല്ലെങ്കിൽ നമ്മുടെയെല്ലാം രക്ഷകനായ ഗോവിന്ദൻ അവളെമാത്രം രഹസ്യമായി കൂട്ടിക്കൊണ്ടുപോകമായിരുന്നില്ല. (ഇവിടെ മുകുന്ദനെ ആരാധിച്ചവൾ എന്ന അർത്ഥത്താൽ ശ്രീശുകൻ സൂചിപ്പിച്ചതു് ശ്രീരാധാദേവിയെയായിരുന്നു. ആ പാവനനാമത്തോടുള്ള അപാരഭക്ത്യാദരവു കാരണം ഉച്ചാരണമാത്രത്താൽ ശ്രീശുകൻ സമാധിസ്ഥനായിപ്പോകും. പ്രവചനം തുടരാൻ അവിടുത്തേക്കു സാധിക്കയില്ലെന്നതിനാലാണു് സൂചിപ്പിക്കുകമാത്രം ചെയ്തതു്) ഗോപികമാർ തുടർന്നു “സഖികളേ! ശ്രീ ഗോവിന്ദന്റെ ഈ പാദരജസ്കം അതിധന്യമാണു്. നാം ഇവയോളം സുകൃതികളല്ല. എന്തെന്നാൽ ഈ ചൂഡികളെ ബ്രഹ്മാവും ശിവനും ലക്ഷ്മീദേവിയും ആദരപൂർവ്വം ശിരസ്സിൽ ധരിച്ചു് എപ്പോഴെങ്കിലും സംഭവിച്ചിരിക്കാവുന്ന കൃഷ്ണവിസ്മൃതിയെന്ന ദോഷത്തെ നീക്കിക്കൊള്ളുന്നു! ഈ ചൂഡികളെ ശിരസ്സിൽ ധാരണം ചെയ്യുന്നതു് നമുക്കും സന്തോഷകരം തന്നെ. പക്ഷെ, നമ്മുടെ പ്രേമസർവ്വസ്വമായ അച്യുതന്റെ അധരാമൃതത്തെ ഒരുവൾ മാത്രം അപഹരിച്ചുകൊണ്ടുപോയി ഏകാന്തത്തിലനുഭവിക്കുന്നുവെന്നോർക്കുമ്പോൾ മനസ്സു് വല്ലാതെ ക്രോധിക്കുന്നു. ഇതാ, ഇവിടെ അവളുടെ കാലടി കാണുന്നില്ല. ഇവിടെ പ്രിയൻ തന്റെ പ്രേയസിയെ തോളിൽ വഹിച്ചിരിക്കണം. ശ്രീശ്യാമസുന്ദരന്റെ പാദമുദ്രകൾ ഭാരം വഹിച്ചതിനാൽ അധികം താഴ്ന്നു പതിഞ്ഞിരിക്കുന്നവയാണല്ലോ. ഇതാ ഇവിടെ പ്രിയയെ താഴെയിറക്കിയിട്ടു് പ്രിയൻ പൂക്കുലത്തരിയിരുന്നു. ഉയരത്തിലുള്ള പൂക്കൾ പറിക്കാനായി കാൽ പെരുവിരൽ മാത്രം ഊന്നി നിന്നിതായിരിക്കണം. ഇതാ ഇവിടെ പഴയ പൂമാല കളഞ്ഞിരിക്കുന്നു. പ്രഭു ഇവിടെയിരുന്നു് പ്രിയയുടെ കേശത്തിൽ പുതിയ പുഷ്പങ്ങൾ ചൂടിച്ചിരിക്കുന്നു”.
+
+ഗോപികളുടെ ഊഹം അസ്ഥാനത്തായിരുന്നില്ല. പ്രഭു തന്നെ ഒരിക്കലും വിട്ടുപിരിയാത്ത ആഹ്ലാദിനീശക്തിയുമായി ഏകാന്തസ്ഥലങ്ങളിൽ സ്വൈരവിഹാരം ചെയ്തുകൊണ്ടിരുന്നു. മററുസ്ത്രീകളെ കാട്ടിൽ ഉപേക്ഷിച്ചു കൃഷ്ണൻ തന്നെ മാത്രം കൂട്ടിക്കൊണ്ടുനടന്നതിനാൽ താൻ തന്നെ മററുള്ളവരേക്കാൾ ഉൽകൃഷ്ട എന്നു ആ ഗോപിയും വിചാരിച്ചു. ഗർവ്വാഭിതയായി ‘എനിക്കൊട്ടും നടക്കുവാൻ വയ്യ. എന്നെയെടുത്തു നടന്നാലും’ എന്നവൾ പറഞ്ഞപ്പോൾ ‘എന്നാൽ എന്റെ തോളിൽ കയറിക്കൊൾക’ എന്നു കൃഷ്ണൻ പറഞ്ഞതും മറററുകുളങ്ങളിലും ഒന്നിച്ചായിരുന്നു. ആത്മാരാമനായ ഭഗവാൻ സ്ത്രീകളോടു ചേർന്നിരുന്നാലും സ്വരൂപാനന്ദത്തിൽ നിന്നും ലേശവും തെററാതെയിരിക്കുന്നവൻ തന്നെ എന്നു ലോകരെ അനുസ്മരിപ്പിക്കുന്നു. ഭഗവാന്റെ ക്രീഡ ആത്മാവിൽ മാത്രമാണു്. സ്ത്രീവിലാസാദികളിൽ ഒട്ടും ഭ്രമിക്കുന്നവനല്ല എന്നു സ്ത്രീജിതരായ അവിവേകികളെ നന്നായി ധരിപ്പിക്കുവാനും അവർക്കു് താക്കീതു നൽകുവാനും ഭഗവാൻ സ്വപ്രേയസികളെ വിട്ടുപോയി. ഗോപികമാർ നാഥന്റെ പാദമുദ്രകളെ പിൻതുടർന്നു് അടുത്തു വന്നപ്പോൾ ‘ഹാ നാഥ, രമണ, പ്രിയതമ, മഹാബാഹോ! അവിടുന്നെവിടെപ്പോയി? അവിടുത്തെ ദാസിയുമായ ഈ കൃപണയ്ക്കു ദർശനം തരേണമേ’, എന്നു വിലപിക്കുന്ന നായികയെക്കണ്ടു. അതുകണ്ടപ്പോൾ അവരുടെ മാത്സര്യമെല്ലാം പോയി സ്വമിനിയുടെ ദൈന്യതയിൽ അനുകമ്പാകലരായി. സാക്ഷാത് ലക്ഷ്മീവല്ലഭനായ ശ്രീകൃഷ്ണനിൽനിന്നു സിദ്ധിച്ച സൽക്കാരവിശേഷത്തേയും തന്റെ ദുരഹങ്കാരദോഷംനിമിത്തം സംഭവിച്ച പരിത്യാഗദുഃഖത്തേയും ആ പ്രിയ ദേവി ഗോപികമാരോടു വിസ്തരിച്ചു പറഞ്ഞു. അതുകേട്ടു അവർ വളരെ വിസ്മയിച്ചു. തുല്യദുഃഖിതരായ അവരെല്ലാവരുമൊന്നിച്ചു് വീണ്ടും കാട്ടിലെല്ലാം പ്രിയതമനെ അന്വേഷിച്ചുനടന്നു. അപ്പോഴേക്കും ചന്ദ്രനും അസ്തമിച്ചു എങ്ങും അന്ധകാരമായി. ഇനിയെന്തുചെയ്യാനാണു്? എന്നിട്ടും അവർ വ്രജത്തിലേക്കു മടങ്ങിയില്ല. നിസ്സഹായരായ അവർ തിരച്ചിൽ മതിയാക്കി യമുനാപുളിനത്തിൽ മടങ്ങിവന്നു.
+
+ശതകോടി ഗോപികമാരും പ്രാണാധികപ്രിയന്റെ വിരഹാഗ്നിയിൽ വെന്തുകുകയാണ്. പ്രിയ സാമീപ്യം കൂടാതെയുള്ള ജീവിതം ശൂന്യശൂന്യമായി അവർക്കുതോന്നി. എല്ലാവർക്കും ഒരേ ഒരു ചിന്തയേയുള്ളു. എല്ലാവർക്കും ഒന്നേ പറയാനുള്ളു. എല്ലാവർക്കും ഒരേകഥയേ കേൾക്കേണ്ടു. എല്ലാവർക്കും ഒരേസ്വരൂപമേ കാണേണ്ടു. സ്വപ്രയത്നത്താൽ പ്രാണേശ്വരനെ കണ്ടുകിട്ടുകയില്ലെന്നു ബോധ്യമായി. മുമ്പുണ്ടായിരുന്ന അല്ലാഹങ്കാരവും വിരഹാഗ്നിയിൽ ദഹിച്ചു ഭസ്മമായി. അവർ സമസ്തകരണേന്ദ്രിയങ്ങളോടുകൂടി സമ്പൂർണ്ണമായി ശ്രീകൃഷ്ണനെ ശരണം പ്രാപിച്ചു. ‘പ്രഭോ! വേഗം വന്നു ദർശനം തരേണമേ’ എന്നുകരണ്ടുപ്രാർത്ഥിച്ചു. കൃഷ്ണനെത്തന്നെ ചിന്തിച്ചും കൃഷ്ണനെത്തന്നെ കീർത്തിച്ചും കൃഷ്ണചേഷ്ടകളെ അനുകരിച്ചും കൃഷ്ണഗുണമഹിമകളെ ധ്യാനിച്ചും കൃഷ്ണമയികളായിത്തീർന്ന ആ പ്രേമദേവതകൾ തങ്ങളെ നിശ്ശേഷം മറന്നു. ഗൃഹപതിപുത്രാദികളുടെ സ്മരണയുണ്ടായിരുന്നില്ലെന്നു പിന്നെ പറയണോ? അനന്തരം അത്രയും ഗോപികമാർ ഒന്നിച്ചു് ഏകസ്വരത്തിൽ വൃന്ദാവന നരീക്ഷത്തെ—പോര, സ്ത്രീഭാവനങ്ങളേയും, കോരിത്തരിപ്പിച്ചുകൊണ്ടു് അത്യുച്ചത്തിൽ കൃഷ്ണകീർത്തനം തുടങ്ങി.
+
+---
+
+### അദ്ധ്യായം 31
+
+[ഹേ, ഭഗവൻ! തപ്തന്മാരെ ജീവിപ്പിക്കുന്നതും ബ്രഹ്മജ്ഞാനികളാൽ സ്തുതിക്കപ്പെടുന്നതും, പാപത്തെ നശിപ്പിക്കുന്നതും, ശ്രവണമാത്രത്താൽ മംഗളത്തെ നൽകുന്നതും, മഹിമയാർന്നതുമായ അങ്ങയുടെ കഥയാകുന്ന അമൃതത്തെ ഭൂമിയിൽ ഏതൊരുവർ വിസ്തൃതമായി നിരൂപിക്കുന്നുവോ, ആ ജനങ്ങൾ ഭൂരിദാനം ചെയ്തവരാകുന്നു.]
+
+**ഗോപികാഗീതം**
+
+ശ്രീശുകൻ പറഞ്ഞു:— പ്രിയതമനായ ഗോലോകനാഥനെ ഒരിക്കലും മറക്കാതെ അതിപ്രേമപൂർവ്വം ഹൃദയത്തിൽ നിലനിർത്തിപ്പോന്ന ഗോപികമാർ, ഭഗവത് സംഗത്തിൽ നിന്നും ലഭിച്ച അപരിമിതാനന്ദത്തിൽ മതിമറന്നു് ഒരക്ഷണം ഭഗവാനെ വിസ്മരിക്കാനും തങ്ങളുടെ ഭാഗ്യാതിരേകത്തിൽ ലേശം അഭിമാനിക്കാനും ഇടയായി. തത് ഫലമായി ചിരകാലം കൊതിച്ചു കിട്ടിയ ഭഗവത് സാമീപ്യം നഷ്ടമായി. പ്രിയഭഗവാനെ തിരഞ്ഞു കണ്ടുപിടിക്കാനുള്ള എല്ലാ ശ്രമങ്ങളും വിഫലമായപ്പോൾ അവർ നിരാശയുടെ അടിത്തട്ടിൽ പതിച്ചു. ഭക്തസന്താപനാശകൻ സ്വയം കനിഞ്ഞു ദർശനം തന്നാലല്ലാതെ തങ്ങളുടെ ജീവൻ നിലനിൽക്കുകയില്ലെന്ന ബോധ്യമായി. അഭിമാനലേശത്താൽ സംഭവിച്ച അല്ലാമാലിന്യം പ്രിയവിരഹ ദുഃഖാശ്രുക്കളാൽ കഴിക്കിക്കളഞ്ഞു് പൂർവ്വാധികം പരിശുദ്ധകളായി ആ അനന്യശരണകർ കൃഷ്ണദർശനത്തിനുള്ള തീവ്രവ്യഗ്രതയോടുകൂടി പ്രേക്ഷകരായ സ്വർഗ്ഗവാസികളെ അന്തസ്തബ്ധരാക്കിക്കൊണ്ടു്, ഇപ്രകാരം ഗാനം ചെയ്തു:—
+
+ഹേ പ്രിയതമ! നിന്തിരുവടി അവതരിച്ചപ്പോൾ ലക്ഷ്മീദേവിയും ഇവിടെ സ്ഥിരവാസമാക്കി. ഈ വ്രജഭൂമി വൈകുണ്ഠാദി പുണ്യ ലോകങ്ങളേക്കാൾ അധികം ഉത്കർഷത്തെ പ്രാപിക്കുകയും ചെയ്തു. ഇവിടെയുള്ള സകല ചരാചരങ്ങളും ഇഷ്ടകാമാർത്ഥലാഭത്താൽ സംതൃപ്തരും സംതൃപ്തവുമാണു്. എന്നാൽ അവിടുത്തെ ദർശനത്തിനുവേണ്ടി പ്രാണധാരണം ചെയ്യുന്ന ദാസികളായ ഞങ്ങൾ മാത്രം നിന്തിരുവടിയെ കാണാൻ കഴിയാതെ പരമവ്യാകലരായിരിക്കുകയാണു്. അതിനാൽ സദയം ഞങ്ങൾക്കു് നേത്രഗോചരനായി ഭവിക്കേണമേ.
+
+ഹേ വരദാനതത്പരനായ നാഥ! ഞങ്ങളുടെ വ്രതാവസാനത്തിൽ ഒരു വരം തന്ന കഥ നിന്തിരുവടി മറന്നുപോയോ? ശരത് കാലപത്മത്തിന്റെ അന്തഃശോഭയെ അതിശയിക്കുന്ന തൃക്കൺകടാക്ഷത്താൽ ഞങ്ങളുടെ പ്രാണങ്ങളെ കവൻകൊണ്ടു് മറഞ്ഞിരിക്കുന്നതു് ഒരുവിധത്തിൽ വധം തന്നെയല്ലേ? ആ പ്രാണങ്ങളെ വിട്ടതായ് വാനായിട്ടുണ്ടെങ്കിലും വീണ്ടും ദർശനം തന്നു കടാക്ഷിക്കണേ! മറെറാരു പ്രതിഫലവും മിച്ചിക്കാത്ത ഞങ്ങളിൽ പ്രസാദിക്കേണമേ!
+
+ആശ്രിതവത്സല! സ്വജനങ്ങളോടു നിന്തിരുവടിക്കുള്ള സ്നേഹം എത്രയോ പ്രാവശ്യം തെളിയിച്ചിട്ടുള്ളതാണല്ലോ. കാളിയന്റെ ഘോരവിഷത്തിൽ നിന്നും, അഘാസുരനാകുന്ന മൃത്യുവക്ത്രത്തിൽ നിന്നും, ഇന്ദ്രകോപത്തിൽ നിന്നുണ്ടായ പ്രളയത്തിൽ നിന്നും, ഘോരദാവാഗ്നിയിൽ നിന്നും, വത്സാസുരനിൽ നിന്നും, വ്യോമാസുരനിൽ നിന്നും, ഗോകുലവാസികളെ അവിടുന്നു രക്ഷിച്ചുവല്ലോ. എന്നിരിക്കെ ദാസികളായ ഈ ഞങ്ങളെ മാത്രം വിരഹതാപാഗ്നിയിൽ നിന്നും രക്ഷിക്കാതെ ഉദാസീനനായിരിക്കുന്നതു യുക്തമാണോ?
+
+ഹേ സഖേ! അവിടുന്നു യശോദയെന്ന ഗോപിയുടെ പുത്രൻ മാത്രമാണെന്നു എത്ര തന്നെ നടിച്ചാലും ഞങ്ങൾ വഞ്ചിതരാകയില്ല. അവിടുന്നു സർവ്വാന്തര്യാമിയും സകല ജീവരാശികളുടേയും ഹൃദയഗുഹയിൽ പ്രകാശിക്കുന്ന സർവ്വസാക്ഷിയുമാണെന്നും, വിശ്വരക്ഷയ്ക്കായി ബ്രഹ്മദേവനാൽ പ്രാർത്ഥിതനായിട്ടു് യാദവകുലത്തിൽ അവതരിച്ച ജഗദീശവരാണെന്നും അവിടുത്തെ പ്രസാദത്താൽ ഞങ്ങൾ അറിയുന്നു. അവതാരോദ്ദേശ്യം വിശ്വരക്ഷയാണെങ്കിൽ, അതിൽ അഗതികളായ ഞങ്ങളും ഉൾപ്പെടുന്നില്ലേ? അതിനാൽ ദർശനം തന്നു രക്ഷിക്കേണമേ!
+
+ഹേ വൃദ്ധിവംശപുണ്യ! നിന്തിരുവടിയുടെ കരസരോരുഹത്തിന്റെ മഹിമ എന്തെന്നു നിർണ്ണയിക്കുവാൻ ആർക്കു കഴിയും? സംസാര മഹാസമുദ്രത്തിൽ പതിച്ചു് വളരെക്കാലം ജനനധാരാ പൊങ്ങിയും മരണധാരാ മുങ്ങിയും ദുരിതമനുഭവിക്കുന്ന അനന്തകോടി ജീവജാലങ്ങളിൽ ആരെല്ലാമാണോ നിന്തിരുവടിയുടെ ശ്രീ ചരണങ്ങളെ ദുഃഖനിവൃത്തിക്കായി ശരണം പ്രാപിച്ചാശ്രയിക്കുന്നതു് അവയ്ക്കെല്ലാം അഭയ പ്രദാനം ചെയ്തു് ഉദ്ധരിക്കുന്നതാണല്ലോ ആ കരസരോരുഹം! ലക്ഷ്മീദേവിയുടെ കരത്തെ ഗ്രഹിച്ച ആ കരപങ്കജത്തിനു് സ്ത്രീകളും സാധുശോച്യകളുമായ ഈ അഗതികളുടെ ദുഃഖം തീർക്കാൻ വലിയ പ്രയാസവുമുണ്ടോ? സർവ്വാഭീഷ്ടപ്രദവും പരമശീതളവുമായ ആ കരാംബുജം മറെറാരു ശരണവുമില്ലാത്ത ഞങ്ങളുടെ ശിരസ്സിൽ വെച്ചനുഗ്രഹിക്കേണമേ!
+
+ഹേ സർവ്വസമർത്ഥ! ഞങ്ങൾ ചിരകാലമായി ആഗ്രഹിച്ച അവിടുത്തെ അംഗസംഗം ലഭിച്ചുപോയ അപ്രാകൃതവും ശുദ്ധസാത്വികവുമായ ആ ദിവ്യാനന്ദത്തിൽ ലയിച്ചിരിക്കാതെ ഒരക്ഷണം അല്ല. അഹങ്കരിച്ചുപോയെന്നു സമ്മതിക്കുന്നു. അതിനിങ്ങനെ മറന്നിരുന്നു ശിക്ഷിക്കുന്നതെന്താണോ? സ്വഭക്തജനങ്ങൾക്കു് ഏതെങ്കിലും കാരണവശാൽ മദമുണ്ടായാൽ അതിനെ ധ്വംസനം ചെയ്യാൻ അവിടുത്തെ ചെറുമന്ദഹാസത്തിനു കഴിയുമല്ലോ. ഹേ സഖേ! ദാസികളായ ഞങ്ങളെ സ്വീകരിക്കേണമേ. ഞങ്ങളുടെ അഹങ്കാരം വിരഹതാപാഗ്നിയിൽ വെന്തു ഭസ്മമായി കഴിഞ്ഞു. അതിനാൽ ഗോകുലസന്താപനാശകനായ നിന്തിരുവടി ഇനി ഒട്ടും വൈകാതെ അതിമനോഹരമായ തിരുമുഖാംഭോജത്തെ യുവതികളായ ഞങ്ങളുടെ നേത്രഗോചരമാക്കിത്തരേണമേ.
+
+ഹേ വ്രജേശ്വര! ഭക്തവാത്സല്യത്തിന്റെ പ്രതീകമായ നിന്തിരുവടിയുടെ ശ്രീപദാംബുജം ശരണാഗതരുടെ പാപശാന്തി വരുത്തി പരിശുദ്ധമാക്കുന്നു. ആ പാദാംബുജം കാരുണ്യാതിശയത്താൽ പശുക്കളുടെ പിന്നാലെ സഞ്ചരിക്കുന്നു. സൗന്ദര്യാതിശയത്താൽ ശ്രീദേവിയുടെ സ്ഥിരവാസസ്ഥാനമായിരിക്കുന്നു. വീര്യാതിശയത്താൽ ഘോരകാളീയന്റെ ഫണങ്ങളിൽ ചവിട്ടി മർദ്ദിച്ചു് വിഷാഫാകാരത്തെ ശമിപ്പിച്ചു. അങ്ങിനെയുള്ള ആ പാദകമലത്തെ ഞങ്ങളുടെ വക്ഷസ്സിൽ വെച്ചനുഗ്രഹിച്ചു് അസഹ്യമായ മന്മഥതാപത്തെ തീർക്കേണമേ! (കാമന്റെ നിവൃത്തിസ്ഥാനമായ ഹൃദയത്തിൽ ഭഗവത് പാദസ്പർശം കാമനാശമാകുന്ന പരമ ഫലത്തെ നൽകുന്നു.)
+
+ഹേ താമർക്കണ്ണ! അവിടുത്തെ അധരങ്ങളിൽകൂടി പുറപ്പെടുന്ന വചനമൃതം എത്ര മധുരം! അർത്ഥഗർഭവും ഫലിതസമൃദ്ധവും ശ്രവണ മനോഹരവുമായ ആ വാണികൾ പണ്ഡിതന്മാർക്കും കൂടി ഹൃദയാവർജ്ജകമാണല്ലോ. അവിടുത്തെ ആജ്ഞാകാരികളായ ഞങ്ങൾ അതുകേട്ടു് അത്യന്തം മോഹിച്ചുപോയി. ആ മോഹം തീക്കാനുള്ള സിദ്ധൗഷധമായ അധരാമൃതം ദാനം ചെയ്യുന്നനുഗ്രഹിക്കേണമേ.
+
+ഹേ ശ്രവണ മംഗളനാമധേയ! നിന്തിരുവടിയെ വേർപെട്ട ഞങ്ങൾ ഇപ്പോഴേക്കും മരിച്ചു പോകേണ്ടതായിരുന്നു. മഹാത്മാക്കൾ ഗാനം ചെയ്യുന്ന അവിടുത്തെ കഥാമൃതമാണു് ഞങ്ങളുടെ ജീവനെ നിലനില്ത്തുന്നതു്. അതു് ദേവാമൃതത്തേക്കാൾ എത്രയോ ശ്രേഷ്ഠമാണു്. ഭക്തോത്തമന്മാർ ദേവാമൃതത്തെ ബഹുമാനിക്കുന്നില്ല. കഥാമൃതത്തെ അവർ നിരന്തരം പ്രേമപൂർവ്വം ആസ്വദിക്കുന്നു. കാരണം, അതു് കാമകക്ഷബീജത്തെ നിഷ്ഫലമാക്കുന്നു. ശ്രവണമാത്രത്താൽ സകല അമംഗളങ്ങളേയും നശിപ്പിച്ചു് പരമശാന്തിയെ കൊടുക്കുന്നു. ഭഗവത് പ്രാപ്തിക്കനുകൂലമായ സകല ഗുണങ്ങളേയും പ്രദാനം ചെയ്യുന്നു. സർവ്വകൽമഷങ്ങളേയും തീക്കുന്ന ആ കഥകളെ നിരന്തരം പ്രേമത്തോടും ഭാവത്തോടും ഗാനം ചെയ്തു് ലോകശുദ്ധിവരുത്തുന്ന സുകൃതികളാണു് അത്യുത്തമദാതാക്കൾ. അത്ര വിശിഷ്ടങ്ങളായ ആ കഥകളുടെ നായകനായ നിന്തിരുവടി ശീഘ്രം ദർശനം നൽകിയനുഗ്രഹിക്കേണമേ.
+
+ഹേ പ്രിയതമ! കപടപടോ! അവിടുത്തെ അതിമോഹനമായ മന്ദഹാസവും പ്രേമാമൃതം വർഷിക്കുന്ന അപാംഗവീക്ഷണവും, ധ്യാനിക്കുന്നവനും പരമമംഗളത്തെ പ്രദാനം ചെയ്യുന്ന ലീലാവിലാസങ്ങളും, ഹൃദയത്തെ കേറിത്തരിപ്പിക്കുന്ന രഹസ്യാലാപങ്ങളും കൊണ്ടു് നിന്തിരുവടി ഈ ദാസികളുടെ മനസ്സിനെ ഏററവും ക്ഷോഭിപ്പിച്ചിരിക്കുന്നു. ഇനിയെങ്കിലും ഒട്ടും താമസിക്കാതെ പ്രത്യക്ഷദർശനം തന്നു് ഞങ്ങളുടെ സങ്കടം തീർക്കേണമേ.
+
+ഹേ പ്രാണനാഥ! ഞങ്ങൾ ഇപ്പോഴനുഭവിക്കുന്ന ഹൃദയവേദന പുതിയതൊന്നുമല്ല. ഇതു് ഞങ്ങളുടെ നിത്യാനുഭവമാണു്. നിന്തിരുവടി പശുക്കളേയും തെളിച്ചു കൊണ്ടു് വ്രജത്തിൽ നിന്നും പുറപ്പെടുമ്പോൾ മുതൽ, കാലകോമളങ്ങളായ ആ മൃദുലപാദങ്ങൾ കല്ലിലും മുള്ളിലും തട്ടി മുറിപ്പെടുമോ, വേദനിക്കുമോ, എന്നുള്ള ഉത്കണ്ഠ ആരംഭിക്കുകയായി. അതിസ്നേഹത്താൽ ആശങ്കാകുലരായി ഞങ്ങൾ പകൽ ഓരോ നിമിഷവും ഓരോ യുഗം പോലെ കഴിച്ചു കൂട്ടും. സായംകാലം നിന്തിരുവടി തിരിച്ചെഴുന്നള്ളുന്നതും കാത്തുനിൽക്കുന്ന ഞങ്ങൾക്കു്, നീലാലകങ്ങളാൽ മറക്കപ്പെട്ടതും ഗോധൂളികം പററിയതുമായ ശ്രീമുഖാംബുജദർശനം നൽകിയിട്ടു് ഹേ, വീര! ഞങ്ങളുടെ മനസ്സിനു് അങ്ങു വീണ്ടും വീണ്ടും മന്മഥതാപത്തെ നൽകുന്നു. ആ തിരുമുഖം കാണാൻ ഉത്കണ്ഠാകുലരായ ഞങ്ങൾക്കു് ഇപ്പോൾ ദർശനം തന്നനുഗ്രഹിക്കണേ!
+
+ഹേ രമണ, ആധിനാശക! നിന്തിരുവടിയുടെ ചരണപങ്കജത്തെ ആരുതന്നെ സേവിക്കുകയില്ല! ബ്രഹ്മദേവൻ എന്നും ആ പാദമൂലങ്ങളെ സേവിച്ചുകൊണ്ടിരിക്കുന്നു. മാത്രമല്ല, ആരെല്ലാം ആ തിരുവടികളെ ശരണം പ്രാപിച്ചു സേവിക്കുന്നുവോ, അവരുടെ അഭീഷ്ടങ്ങളെല്ലാം പൂർത്തിയാകുന്നു. ആ തൃപ്പാടങ്ങളെ ധരിച്ചു കൊണ്ടിരിക്കുന്ന ഭൂമീദേവി അധികം ശോഭിക്കുന്നു. ആ ശ്രീചരണങ്ങളുടെ ധ്യാനമാത്രത്താൽ സർവ്വാപത്തുകളും ഓടിയൊളിക്കുന്നു. അതിനാൽ പരമശാന്തിയെ നൽകുന്ന ആ പാദപത്മത്തെ ഞങ്ങളുടെ മാറിൽ വെച്ചനുഗ്രഹിച്ചാലും.
+
+ആശ്രിതരെ ആക്രമിക്കുന്ന കാമാദി ശത്രുക്കളെയെല്ലാം ധ്വംസനം ചെയ്യുന്ന വീരശിഖാമണേ! നിന്തിരുവടിയെ സ്നേഹമായി ചുംബിച്ചുകൊണ്ടു് 'അധരാമൃതം ആസ്വദിക്കുന്ന വേണുവിനു് അനന്തകോടി നമസ്കാരം. ആ അമൃതം സേവിച്ചാൽ ക്ഷുദ്രവിഷയങ്ങളിലും, സ്വസ്ഥസ്ഥാനങ്ങളെന്നു പറയപ്പെടുന്ന പരലോകങ്ങളിലുമുള്ള ആശകളെല്ലാം നശിക്കുന്നു. ആ അധരാമൃതം വിവേകമുള്ള സ്ത്രീപുരുഷന്മാരെല്ലാം കാംക്ഷിക്കുന്ന സ്ഥിതിക്കു് നിത്യദാസികളും അനന്യശരണകളുമായ ഞങ്ങൾക്കൊപ്പം പ്രദാനം ചെയ്യേണമേ എന്നു പ്രാർത്ഥിക്കുകയാണു്”.
+
+ഹേ കാർമ്മുകിൽവർണ്ണ! പ്രാതഃകാലത്തിൽ വൃന്ദാവനത്തിലേക്കു് യാത്രതിരിക്കുന്ന നിന്തിരുവടിയുടെ മോഹനാകാരം ദൃഷ്ടിയിൽ നിന്നും മറഞ്ഞു കഴിഞ്ഞാൽ ഞങ്ങൾക്കനുഭവിക്കുന്ന വിരഹവേദന എത്രയെന്നു പറയാൻ വയ്യ. പിന്നീടു് സായംകാലം വരെയുള്ള ഓരോ ക്ഷണവും ഓരോ യുഗം പോലെ അവസാനമില്ലാത്തതായി ഞങ്ങൾക്കനുഭവപ്പെടുന്നു. വൈകുന്നേരം അവിടുന്ന് എഴുന്നള്ളുന്നതിനു വളരെ മുമ്പു മുതൽ ഞങ്ങൾ മാർഗ്ഗത്തിൽ ദൃഷ്ടിയുറപ്പിച്ചു കാത്തുനിൽക്കും. കടലകന്തളങ്ങളാൽ അലംകൃതമായ അവിടുത്തെ തിരുമുഖശോഭയെ ദൂരെവെച്ചു തന്നെ ഞങ്ങൾ കണ്ണുകളാൽ പാനം ചെയ്തു തുടങ്ങും. അടുത്തടുത്തു വരുന്നതോറും ഞങ്ങളുടെ ആനന്ദമെന്തു പറയട്ടെ! ആ തിരുമുഖം ഞങ്ങൾക്കു് നന്നും കണ്ണെടുക്കയില്ല. ഇടയ്ക്കു് കണ്ണുനിറഞ്ഞു സ്വഭാവത്തെ സൃഷ്ടിച്ച ബ്രഹ്മദേവന്റെ ബുദ്ധികൃത്യതയെ പഴിക്കാൻ പോലും തോന്നും. അത്രത്തോളം നിഷ്ഫലപ്രേമാസക്തകളായ ഞങ്ങളെ ഈ വിധം മറഞ്ഞിരുന്നു വ്യസനിപ്പിക്കുന്നതു് പ്രേമസമുദ്രനായ നിന്തിരുവടിക്കു യുക്തമാണോ?
+
+ഹേ അച്യുത! ഞങ്ങൾ പതി, പുത്രന്മാർ, ഭ്രാതാക്കൾ, ബന്ധുക്കൾ മുതലായവർ നിത്യസുഖപ്രദരെന്നറിഞ്ഞു അവരെ ആദരിക്കാതെ നിത്യസ്വതന്ത്രനായ നിന്തിരുവടിയെ ഗീതഗതി ജരിതങ്ങളായി തേടി വന്നവരാണു്. സർവ്വപ്രാണികളേയും മോഹിപ്പിക്കുന്ന അങ്ങയുടെ വേണുഗാന ശ്രവണത്താൽ അത്യധികം മോഹിത ചിത്തകളായി ധർമ്മാധർമ്മവിധികളെ അതിക്രമിച്ചു് അങ്ങയുടെ സമീപം പാഞ്ഞെത്തിയ സ്ത്രീകളായ ഞങ്ങളെ കാട്ടിൽ ഇപ്രകാരം ഉപേക്ഷിക്കുന്നതു അങ്ങേക്കുചിതമാണോ?“സർവ്വധർമ്മാൻ പരിത്യജ്യ മാമേകം ശരണം വ്രജ അഹം ത്വാ സർവ്വപാപേഭ്യോ മോക്ഷയിഷ്യാമി മാ ശുച”എന്ന അങ്ങയുടെ മഹാവാണിയെ സ്വയം പാലിക്കാതെ സ്ത്രീകളെ രാത്രി കാട്ടിൽ ഉപേക്ഷിച്ച അങ്ങു് വഞ്ചകനല്ലയോ?
+
+ഹേ മനോമോഹന! നിന്തിരുവടിയെ മറന്നാൽ അല്പം ആശ്വാസം കിട്ടുമോ എന്നാശിച്ചു പോവുകയാണു്. പക്ഷെ അതിനു കഴിയുന്നില്ലല്ലോ. ഞങ്ങളുടെ ചിത്തത്തെ ഹാദാകർഷിക്കത്തക്ക വിധത്തിലുള്ള രഹസ്യാലാപങ്ങളും, പ്രേമകടാക്ഷങ്ങളും, മോഹന മന്ദസ്മിതം ചൊരിയുന്ന മുഖാരവിന്ദവും, ലക്ഷ്മീദേവിയുടെ വാസസ്ഥാനമായ വിശാല വക്ഷസ്ഥലവും പല പ്രാവശ്യം കണ്ടു് കണ്ടു് പ്രേമാധിക്യത്താൽ അത്യധികം ക്ഷോഭിച്ച മനസ്സു് വീണ്ടും അങ്ങയോടു ചേരുവാൻ ആഗ്രഹിക്കുന്നു. ഞങ്ങളെന്തുചെയ്യട്ടെ!
+
+ഹേ പൂജ്യ! നിന്തിരുവടിയുടെ അവതാരം വ്രജത്തിലും വനത്തിലുമുള്ള ജീവകോടികൾക്കും അഖില ലോകത്തിനും ദുഃഖം തീർത്തു് മംഗളം പ്രദാനം ചെയ്യാനാണല്ലോ. അഭേദമൂർത്തിയായ നിന്തിരുവടിക്കു കാരുണ്യവർഷം ചൊരിയുന്ന വിഷയത്തിൽ ലേശവും ഭേദഭാവനയില്ല. അതിനാൽ സർവ്വസമർപ്പണം ചെയ്തു് അവിടുത്തെ പാദമൂലം തേടിവന്നാശ്രയിച്ച സ്വജനങ്ങളായ ഈ കിങ്കരികളുടെ ഹൃദ്രോഗം എന്തൊന്നു നൽകിയാൽ ശമിക്കുമോ അതിനെ അല്പം നൽകേണമേ.
+
+ഇപ്രകാരം ഗോപരമണികൾ ആവുന്നതും പ്രാർത്ഥിച്ചശേഷം അത്യന്തം പരവശകളായ ആ പ്രേമസമുദ്രിണികൾ രോദനം ചെയ്തുകൊണ്ടു് ഏക സ്വരത്തിൽ ഇപ്രകാരം ഗദ് ഗദവോണികളെ പറഞ്ഞു:— ഹേ പ്രിയതമ! സ്വാർത്ഥികകളായ ഞങ്ങൾ സ്വസുഖം മാത്രം കാംക്ഷിച്ചു് എന്തൊക്കെയോ പറഞ്ഞു പോയി. നിന്തിരുവടി ഇപ്പോൾ എവിടെ, ഏതവസ്ഥയിലിരിക്കുന്നുവെന്നു ഞങ്ങളറിയുന്നില്ല. ഈ ഇരുട്ടിൽ തനിയെ സഞ്ചരിക്കുകയാണോ? അങ്ങനെയാണെങ്കിൽ ആ കോമള പാദപത്മങ്ങൾ വല്ല കല്ലിലോ മുള്ളിലോ തട്ടി വേദനിക്കുമോ, മുറിയുമോ, എന്നോർക്കുമ്പോൾ ഞങ്ങളുടെ ഹൃദയം തകരുന്നു. പ്രഭോ! ഞങ്ങൾക്കതു സഹിക്കാൻ കഴിയുന്നില്ല. ആ കോമള പാദപത്മത്തെ ഞങ്ങൾ വേദനിക്കുമോ എന്ന ഭയത്തോടെയാണെങ്കിലും കചതടങ്ങളിൽ ധരിച്ചു കൊള്ളാം. പ്രാണേശ്വര, ആപാസബന്ധോ! ഞങ്ങൾക്കു് പ്രാണനിലും പ്രിയമായ ആ പൊൻതിരുമേനിയിൽ ലേശം വേദനയോ ഒരു പോറലോ ഉണ്ടായെന്നു കണ്ടാൽ പിന്നെ ഞങ്ങളെന്തിനു ജീവിച്ചിരിക്കണമേ? പ്രഭോ കൃഷ്ണ! വേഗം വരണേ, ഈ അഗതികൾക്കു ദർശനം തരേണമേ!”.
+
+---
+
+### ദശമസ്കന്ധം — അദ്ധ്യായം 32
+
+### അദ്ധ്യായം 32
+
+[നിഷ്ഫലഭാവത്താൽ നിങ്ങളുടെ എന്നോട് കൂടിയുള്ള ചേർച്ച ദോഷരഹിതമാകുന്നു. ആ ഉൽകൃഷ്ടകർമ്മത്തിനു പ്രത്യുപകാരം ചെയ്യാൻ ദേവായുസ്സു കൊണ്ടും ഞാൻ സമർത്ഥനായി ഭവിക്കുന്നില്ല. യാതൊരുവർ ദുർഭേദ്യങ്ങളായ ഗൃഹാദി ശൃംഖലകളെ നിശ്ശേഷം ഭേദിച്ചു് എന്നെ ഏകാന്തമായി ഭജിച്ചുവോ, ആ നിങ്ങളുടെ സത്കർമ്മം തന്നെ അതിനു പ്രത്യുപകാരമായി ഭവിക്കട്ടെ.]
+
+**ഗോപികകൾക്കു് വീണ്ടും ഭഗവദ്ദർശനം**
+
+ശ്രീശുകൻ പറഞ്ഞു:— പ്രിയതമ വിരഹത്താൽ ഹൃദയം തകർന്നു ഗോപികമാർ കൃഷ്ണദർശനലാലസകളായി പലതും പറഞ്ഞു് വളരെ നേരം കരഞ്ഞു. ചിത്തക്ഷോഭം പരമകാഷ്ഠയിലെത്തിയപ്പോൾ വാക്കുകൾ നിലച്ചുപോയി. പ്രാണപ്രിയൻ ഇനി ദർശനം തരാതിരിക്കുമോ എന്ന ഉൽകടമായ ആശങ്കയാൽ നീറുന്ന ഹൃദയത്തോടുകൂടി അവർ കൂട്ടമായി അത്യുച്ചത്തിൽ രോദനം ചെയ്തു. ക്ഷുദ്രങ്ങളായ കാമോപഭോഗങ്ങൾക്കു് വേണ്ടി കടംകടമായി കണ്ണീരൊഴുക്കുന്ന പ്രാകൃത ലോകം ഈശ്വരദർശനത്തിനുവേണ്ടി കണ്ണീററൊഴുക്കിയ ഗോപികമാരുടെ വിലാപകാവ്യം പാടിക്കേൾക്കേണ്ടതാണു്. അവരുടെ ദീനരോധനം ത്രിഭുവനങ്ങളേയും പാവനമാക്കിക്കൊണ്ടു് ആന്തരീക്ഷത്തിൽ അലതല്ലി. കരുണാമയനായ ശ്യാമസുന്ദരൻ കരഞ്ഞു കൊണ്ടിരുന്ന ഗോപസുന്ദരിമാരുടെ മധ്യത്തിൽ മന്ദഹാസവദനനായി പീതാംബര, വനമാലാധരനായി സാക്ഷാത് മന്മഥനേയും മനസ്സിനെ മഥിക്കുന്നതായ സൗന്ദര്യത്തോടുകൂടി സുന്ദരപ്രതോടുകൂടിയവനായി പ്രത്യക്ഷപ്പെട്ടു.
+
+പ്രിയ ഭഗവദ്ദർശനം വീണ്ടും ലഭിച്ച ക്ഷണത്തിൽ, അതുവരെ വാടിത്തളർന്നിരുന്ന ഗോപികമാരുടെ മുഖകമലങ്ങൾ വികസിച്ചു. ശരീരം വിട്ടുപോയ പ്രാണൻ തിരിച്ചു വന്നാലെന്നപോലെ അവർ പെട്ടെന്നെഴുന്നേറ്റു നിന്നു. കേശന്റെ കേശങ്ങളല്ലാം ഭഗവാനെ കാണുന്നതുവരെയല്ലേയുള്ളു. അവർ ആഹ്ലാദം ഏതുവിധം പ്രകടിപ്പിക്കണമെന്നറിഞ്ഞില്ല. എല്ലാവരും പ്രാണേശ്വരനെ ചുറ്റി നിന്ന് ഓരോ ചേഷ്ടകളെ ചെയ്തു. ഒരു ഗോപി ശ്രീകൃഷ്ണന്റെ വലത്തെ കരാംബുജം തന്റെ രണ്ടു കൈ കൊണ്ടും പ്രേമപൂർവ്വം ഗ്രഹിച്ചു. മറെറൊരു ഗോപി പ്രിയന്റെ ചന്ദനാലംകൃതമായ വാമകരത്തെ തന്റെ തോളിലെടുത്തുവച്ചു ധരിച്ചു നിന്നു. അത്യനുരക്തയായ ഒരു ഗോപി പ്രേമമൂർത്തിയുടെ താംബൂലചർവ്വിതത്തെ രണ്ടു കയ്യിലും സ്വീകരിച്ചു് കൃതാർത്ഥയായി. വിരഹതാപത്താൽ അത്യന്തം വാടിപ്പോയ ഒരു തരുണി ശ്രീകൃഷ്ണചന്ദ്രന്റെ ഹിമശീതളമായ അംഘ്രികമലത്തെ തന്റെ മാറിൽ ചേർത്തുവച്ചു് താപം ശമിപ്പിച്ചു. ഒരു ഗോപി അകലെ നിന്നു് അധരം കടിച്ചു് പുരികം വളച്ചു് ‘ഞങ്ങളെ നിർദ്ദയം ഉപേക്ഷിച്ചു പോകാൻ മനസ്സു വന്നല്ലോ’ എന്ന ഭാവത്തിൽ പ്രണയ കോപം നടിച്ചു് പ്രിയനെ ഹനിക്കാനെന്നപോലെ കണ്ണു ചുവപ്പിച്ചു നോക്കി നിന്നു. അനുരാഗവിവശയായ ഒരു ഗോപി, കാണാതെ കണ്ടുകിട്ടിയ പ്രിയന്റെ മുഖകമലത്തെ കണ്ണുമിഴയാത്ത നേത്രങ്ങളാൽ എത്രതന്നെ പാനം ചെയ്തിട്ടും തൃപ്തിയായില്ല. കാന്തനെ ഒരു കാരണവശാലും ദ്വേഷിക്കാൻ കഴിയാത്ത ഒരു വല്ലഭി പ്രേഷ്ഠതമനെ നേത്രരന്ധ്രങ്ങളിൽ കൂടി ഹൃദയത്തിലാക്കിയിട്ടു് മഹായോഗികളെപ്പോലെ ആനന്ദസമുദ്രത്തിൽ മുങ്ങിക്കിടന്നു. ഇപ്രകാരം പ്രാണനാഥന്റെ ദർശനത്താൽ പരമോത്സവമതികളായ ഗോപസുന്ദരിമാരെല്ലാവരും ഓരോ വിധത്തിൽ സർവ്വേശ്വരസംഗസുഖത്തെ അനേ്വഷിച്ചു നിർവ്വൃതരായി, അതുവരെ അന്വേഷിച്ച ദുഃഖമെല്ലാം തീർത്തു. സർവ്വേശ്വരസ്വസ്പന്ദനം ആപ്തകാമനുമായ അച്യുതൻ, തനിക്കുവേണ്ടി മാത്രം പ്രാണധാരണം ചെയ്യുന്ന പ്രിയതമകളുടെ മധ്യത്തിൽ പുർവ്വാധികം ശോഭിച്ചു.
+
+പ്രഭു എല്ലാ ഗോപികമാരേയും കൂട്ടിക്കൊണ്ടു് സുന്ദരമായ യമുനാ പുളിനത്തിൽ പ്രവേശിച്ചു. അപ്രാകൃത മഹാപുരുഷൻ അപ്രാകൃത ചേതകളോടു ചേർന്നു് ദിവ്യ രാസലീല ചെയ്യാൻ സങ്കല്പിച്ചതറിഞ്ഞു്, ആ പുരുഷ കൃഷ്ണനെ ഉചിതമായി സൽക്കരിച്ചു സേവിക്കുന്ന വിഷയത്തിൽ പ്രകൃതീദേവി നന്നേ മനസ്സിരുത്തി. കന്ദമന്ദാരാദി പുഷ്പങ്ങൾ വിരിഞ്ഞു ശോഭിച്ചു. അവയുടെ സൗരഭ്യത്തെ വഹിച്ചുകൊണ്ടു് മന്ദമാരുതൻ ആ പ്രദേശമെല്ലാം സുഗന്ധപൂരിതമാക്കി. വായുവിനെ അനുസരിച്ചു വണ്ടുകളും മൂളിക്കൊണ്ടു ചുററി പറന്നു. ശരച്ചന്ദ്രന്റെ ശുഭ്രകിരണങ്ങളാൽ യമുനാപുളിനം പകൽ പോലെ പ്രകാശിച്ചു. പുണ്യയമുന തന്റെ തിരകളാകുന്ന കൈകളാൽ പുളിനത്തിൽ ഉദ്ഭൂതങ്ങളായ മണൽത്തരികളെ പരത്തി. തന്റെ സമസ്തവിഭവങ്ങളേയും ചേർത്തുവച്ചു് പ്രകൃതീ ദേവിയാൽ സ്വാമിയായ ഭഗവാന്റെ അപ്രാകൃത ലീലയ്ക്കായി സുന്ദര സംവിധാനങ്ങളോടു കൂടി തെയ്യാറാക്കപ്പെട്ട മനോഹര രംഗമായി ആ വൃന്ദാവനം പരിശോഭിച്ചു.
+
+ഭഗവാനാൽ അനുനയിക്കപ്പെട്ട മഹാമനസ്വിനികളായ ഗോപികമാർ ആ അന്തരംഗരംഗത്തിൽ പ്രവേശിച്ചപ്പോൾ തന്നെ അത്യന്താഹ്ലാദഭരിതരായി. പ്രിയതമന്റെ രാസലീലാരംഭം കൂടികണ്ടപ്പോൾ അവർ മനോരഥങ്ങളെല്ലാം സാധിച്ചവരെപ്പോലെ കൃതാർത്ഥകളായി. ആത്മാവും ബന്ധുവുമായ നന്ദകിശോരനു് ഇരിപ്പിടമായി തങ്ങളുടെ കചകചമാകികൊണ്ടുള്ള ഉത്തരീയങ്ങളാൽത്തന്നെ വിരിച്ചുകൊടുത്തു. നിശ്ചലചേതരായ മഹായോഗേശ്വരന്മാരുടെ ധ്യാനപ്രഭൂതമായ ശുദ്ധഹൃദയ കമലത്തിൽ അവരാൽ കല്പിക്കപ്പെട്ട ആസനത്തിൽ വിരാജിക്കുന്ന സർവ്വേശ്വരൻ അതിലുമധികം പ്രീതിയോടുകൂടി ഗോപികകളുടെ ഉത്തരീയത്തിൽ ഉപവിഷ്ടനായി തന്റെ ത്രൈലോക്യ സുന്ദരമായ തിരുമേനിയെ അവർക്കു് ഗോചരമാക്കി. ശ്രീകൃഷ്ണമായികളായ ഗോപികകളുടെ പദവി യോഗേശ്വരന്മാരേക്കാൾ അതിശയിരുന്നതാണെന്നു് ഇപ്രകാരം ഭഗവാൻ സ്പഷ്ടമാക്കി.
+
+ആ ഭാഗ്യവതികൾ തങ്ങളുടെ പ്രേമസർവ്വസ്വത്തെ ആസനസ്ഥനാക്കി താംബൂലദാനം മുതലായ സൽക്കാരങ്ങൾ കൊണ്ടു പൂജിച്ചു. ചിലർ പ്രിയന്റെ തൃക്കരങ്ങളേയും ചിലർ തൃപ്പാടങ്ങളേയും സ്നേഹാദരപൂർവ്വം മടിയിലെടുത്തുവച്ചു് മന്ദം മന്ദം തലോടി. വേണുഗാനം ചെയ്തു്, ഗൃഹത്തിലിരുന്ന തങ്ങളെ കാട്ടിൽ വിളിച്ചു വരുത്തിയിട്ടു് നിഷ്കരണം ഉപേക്ഷിച്ചുപോയ നാഥന്റെ വദനസരോജത്തെ നോക്കി ആദ്യം സ്തുതിച്ചശേഷം അവർ അർത്ഥഗർഭമായ ഒരു സംശയം ചോദിച്ചു:— പ്രഭോ! ഈ ലോകത്തിൽ മൂന്നു തരക്കാരെ കാണുന്നുണ്ടു്. ഒരുകൂട്ടർ തങ്ങളെ സേവിക്കുന്നവരെ അതുപോലെ അങ്ങോട്ടും സേവിക്കുന്നു. രണ്ടാമതൊരു കൂട്ടർ തങ്ങളെ സേവിക്കാത്തവരേയും കൂടി സേവിക്കുന്നു. മൂന്നാമതൊരു കൂട്ടർ ആരേയും, തങ്ങളെ സേവിക്കുന്നവരായാലും അല്ലെങ്കിലും സേവിക്കുന്നില്ല. ഈ മൂന്നു തരക്കാരിൽ ഉത്തമ മദ്ധ്യമ അധമന്മാർ ആരു് എന്ന വിഷയത്തിൽ അവിടുത്തെ സുചിന്തിതാഭിപ്രായമറിഞ്ഞാൽ കൊള്ളാം.”
+
+ഗോപികളുടെ പൃച്ഛത്തിന്റെ ആന്തരോദ്ദേശ്യം മനസ്സിലാക്കിയ ശ്രീഭഗവാൻ അരുളിച്ചെയ്തു:— ഹേ സഖികളേ! നിങ്ങൾ നല്ല ചോദ്യമാണു് ചോദിച്ചതു്. അതിനു ഞാൻ പറയാൻ പോകുന്ന സമാധാനം കേട്ടാൽ നിങ്ങളുടെ സംശയം തീരും. ശ്രദ്ധിച്ചു കേൾക്കുവിൻ. ചിലർ പരസ്പരം സ്നേഹം പ്രകടിപ്പിക്കുന്നു. അതു് യഥാർത്ഥ സ്നേഹമാണെന്നു തെറ്റിദ്ധരിക്കേണ്ട, അവിടെ സ്ഥായിയായ സ്നേഹമോ ധർമ്മമോ ഇല്ല. അതു സ്വകാർയ്യലാഭത്തെ മാത്രം ലക്ഷ്യമാക്കി ചെയ്യുന്ന അഭിനയം മാത്രമാണു്. ആദ്യം തനിക്കുവേണ്ടി പശുക്കളെ പോഷിപ്പിച്ചു വളർത്തുന്നതുപോലെ മാത്രമുള്ളതാണു്. ആദ്യം നിലച്ചാൽ സ്നേഹവുമവസാനിച്ചു. രണ്ടാമത്തെ കൂട്ടർ തങ്ങളെ ചിലർ സ്നേഹിക്കുന്നുവെങ്കിലും ഇല്ലെങ്കിലും അങ്ങോട്ടു സ്നേഹിക്കുന്നവർ—മാതാപിതാക്കൾ സന്താനങ്ങളെയെന്നപോലെ. അവിടെ സ്വാർത്ഥതയില്ല, നിഷ്കപടമായ സൗഹൃദവും ധർമ്മവുമുണ്ടുതാനും. മൂന്നാമത്തെ തരക്കാർ തങ്ങളെ ആരെങ്കിലും ഭജിച്ചാലും അങ്ങോട്ടു ഭജിക്കുന്നില്ല. തങ്ങളെ ഭജിക്കാത്തവരെ ഭജിക്കുന്നില്ലെന്നു പിന്നെ പറയേണ്ടതില്ലല്ലോ. അവരെ, ആത്മാരാമന്മാർ, ആപ്തകാമന്മാർ, അകൃതജ്ഞന്മാർ, ഗുരുദ്രോഹികൾ എന്നിങ്ങനെ നാലായി തരംതിരിക്കാം. ആത്മാരാമന്മാർ സദാ ആത്മാനന്ദത്തിൽ സ്ഥിതിചെയ്യുന്ന മഹാത്മാക്കളാണു്. അവർ ഉള്ളിലും പുറത്തും സ്വാത്മാവിനെ മാത്രമല്ലാതെ അന്യമായി ഒന്നും കാണുന്നില്ല. ആ അഭേദദർശികൾ തങ്ങളെ സേവിക്കുന്നവരേയും ദോഷിക്കുന്നവരേയും സ്വാത്മാവുതന്നെയായി കാണുന്നു. അന്യരായി കാണുന്നില്ല. താൻ തന്നെത്തന്നെ സേവിക്കാറില്ല. ആ നിലയിൽ സ്ഥിരത വന്നിട്ടില്ലാത്തവരാണു് ആപ്തകാമന്മാർ. അവർക്കു ബാഹ്യദർശനവും ലോകവ്യവഹാരങ്ങളും ഉള്ളതായി കണ്ടേക്കാം. എന്നാൽ അവർക്കു ലേശവും വിഷയസംബന്ധമോ, ശത്രുമിത്രഭേദമോ ഉണ്ടാവില്ല. അതിനാൽ അവരും ആരേയും ഭജിക്കാറില്ല. അകൃതജ്ഞന്മാർ അന്യർ തങ്ങൾക്കു ചെയ്യുന്ന സ്നേഹോപകാരങ്ങളെ തിരിച്ചറിയാനുള്ള ശക്തിയില്ലാത്ത മൂഢന്മാരാണു്. ഉപകാരത്തിനു പ്രത്യുപകാരം ചെയ്യണമെന്ന സാധാരണ ധർമ്മം പോലും അവർക്കറിഞ്ഞുകൂടാ, അതിനാൽ അവരും ആരേയും സേവിക്കുന്നില്ല. നാലാമത്തെ കൂട്ടരായ ഗുരുദ്രോഹികൾ സമുദായദ്രോഹികളായ ഭയങ്കരന്മാരാണു്. ‘ഉപകർത്താ ഗുരുസ്മൃതഃ’—ഉപകാരം ചെയ്തവൻ ഗുരുവാകുന്നു, എന്ന ശാസ്ത്രത്തെ നിന്ദിക്കുന്നവരാണു്. ഇവർ പ്രത്യുപകാരം ചെയ്യുന്നില്ലെന്നു മാത്രമായാൽ സഹിക്കാമായിരുന്നു. അവിടേയും നിൽക്കാതെ ഉപകാരിയെയും ദ്രോഹിക്കാൻകൂടി മടിക്കാത്ത ആ ഖലന്മാരെ ദൂരെ വർജ്ജിക്കേണ്ടതാണു്.
+
+എന്നാൽ പ്രിയ സഖികളേ! ഞാൻ ഇവരിലൊന്നിലും പെടുന്നില്ല. സർവ്വഭൂത സൗഹൃദവും സർവ്വജീവ കാരുണ്യവുമാണു് എന്റെ സ്വഭാവം. ഒരിടത്തും ഒരിക്കലും ഭേദഭാവനയില്ല. എങ്കിലും എന്നിൽ അഹൈതുകീഭക്തിയെ ചെയ്യുന്ന അനന്യശരണരായ ഭക്തന്മാരുടെ ശ്രേയസ്സിൽ ഞാൻ അതീവ തല്പരനാണു്. അവരുടെ ചിത്തം എന്നിൽ കൂടുതൽ കൂടുതലുറയ്ക്കുന്നതിനു വേണ്ടി ഞാൻ ചിലപ്പോൾ അവരിൽ നിന്നും മറഞ്ഞിരിക്കുന്നു. അതു കേവലവാത്സല്യം കൊണ്ടാണു്. ദരിദ്രനു യദൃച്ഛയാ കിട്ടിയ നിധി നഷ്ടപ്പെടുമ്പോൾ അവൻ അതിനെപ്പററി എത്രത്തോളം തീവ്രമായി ചിന്തിക്കുമോ, അതിലുമെത്രയോ ഉപരിയായി എന്റെ ദർശനം ഒരിക്കൽ ലഭിച്ചിട്ടു് പിന്നീടു നഷ്ടപ്പെട്ട കേതൻ മറെല്ലാം മറന്നു് എന്നെ മാത്രം ധ്യാനിച്ചുകൊണ്ടിരിക്കും. ഇതനുഗ്രഹമല്ലയോ? എന്റെ പ്രിയതമകളായ നിങ്ങൾ ഒരു ക്ഷണമാത്രമെങ്കിലും എന്നെ മറന്നതു് എനിക്കു സഹിക്കാൻ കഴിഞ്ഞില്ല. നിങ്ങളുടെ ചിത്തം വീണ്ടും എന്നിൽ സുദൃഢമായി ഉറപ്പിക്കുവാൻ ഞാൻ തൽക്കാലം മറഞ്ഞുവെന്നേയുള്ളു. അതിനാൽ എന്നോടുള്ള സ്നേഹാധികൃതാൽ ധർമ്മാധർമ്മവിചാരത്തേയും സ്വബന്ധുക്കളേയുമുപേക്ഷിച്ചു നിങ്ങളിൽ പരമപ്രീതികരനായ എന്നിൽ നിങ്ങൾ ദോഷദർശനം ചെയ്യരുതു്.
+
+ഹേ പ്രേമസമുദ്രിണികളേ! നിങ്ങളെ സ്തുതിക്കാൻ എനിക്കു വാക്കുകൾ കിട്ടുന്നില്ലല്ലോ. ചിന്മയനായ എന്നിൽ നിങ്ങൾ വിഷയസംബന്ധലേശം കൂടാതെ പരിശുദ്ധപ്രേമത്തെ സമർപ്പിച്ചു. സർവ്വേശ്വരനായ എന്റെ പാദമൂലത്തെ പ്രാപിക്കാൻ മാത്രം നിങ്ങൾ ആഗ്രഹിച്ചു. മത് പ്രാപ്തിക്കു വ്യാLANGUAGEകളും ലൗകികത്തിൽ മാത്രം പ്രസക്തങ്ങളായ ശാസ്ത്രവിധികളേയും വേദശാസനകളേയും ദേഹസംബന്ധികളേയും നിങ്ങൾ നിസ്സങ്കോചം ഒരേ ത്യജിച്ചു. ഒരു വിധത്തിലും ഛേദിക്കാൻ കഴിയാത്ത ഗൃഹ പതി പുത്രാദികളായ വഞ്ചനകളെ സുദൃഢമായ വൈരാഗ്യത്താൽ മുറിച്ചു കളഞ്ഞു് എന്നെ അനന്യമായി ശരണം പ്രാപിച്ച നിങ്ങളുടെ പരിശുദ്ധ പ്രേമം ലോകത്തിനു ഉത്തമ മാതൃകയാണു്. പ്രിയ സഖികളേ! ശരണാഗതി ധർമ്മത്തെ പ്രകാശിപ്പിക്കുന്ന ജ്യോതിസ്സ്വങ്ങളായ നിങ്ങളുടെ പരിശുദ്ധപ്രേമത്തിനു പകരം ഏതെങ്കിലും തരാൻ ദേവന്മാരുടെ ആയുസ്സു കിട്ടിയാൽ പോലും ഞാൻ തീരെ അശക്തനാണു്. എന്റെ പാദസേവയൊഴിച്ചു മറെറൊന്നും വേണ്ടാത്ത നിങ്ങൾക്കു ഞാൻ എന്നുമെന്നും കടക്കാരനായിക്കഴിഞ്ഞു.”
+
+---
+
+### ദശമസ്കന്ധം — അദ്ധ്യായം 33
+
+### അദ്ധ്യായം 33
+
+[ഇപ്രകാരം ചന്ദ്രകിരണങ്ങളാൽ പ്രകാശിപ്പിക്കപ്പെട്ടും, കാവ്യങ്ങളിൽ വർണ്ണിക്കപ്പെടുന്ന കഥാംശം രസങ്ങൾക്കും ആശ്രയഭൂതങ്ങളുമായിരിക്കുന്ന ആ ശരത് കാല രാത്രികളിലെല്ലാം സത്യസങ്കല്പനായ ഭഗവാൻ തന്നിൽ അനുരക്തകളായ രമണീഗണങ്ങളോടുകൂടി ആത്മാവിൽ അവരോധിക്കപ്പെട്ട ചരമധാതുവോടുകൂടിയവനായി രമിച്ചു. (അവരോധസൗരതമെന്ന പദപ്രയോഗം രാസലീലയുടെ മർമ്മപ്രകാശകമാകുന്നു).]
+
+**മഹാരാസലീല**
+
+ശ്രീശുകൻ പറഞ്ഞു:— ശ്രീഭഗവാന്റെ ആത്മാർത്ഥവും അതിമനോഹരവുമായ അദ്ഭുതവാണി ഗോപികകളുടെ ഹൃദയത്തെ തണുപ്പിച്ചു. പ്രഭു ഒരിക്കലും പിരിയാതെ തങ്ങളോടുകൂടെ ഉണ്ടായിരുന്നുവെന്നറിഞ്ഞപ്പോൾ അവർ ആശ്വസ്തരായി. ഭഗവാന്റെ അംഗസ്പർശനവുംകൂടി ലഭിച്ചപ്പോൾ വിരഹതാപം നിശ്ശേഷം ശമിച്ചു് പരമാനന്ദരക്തയായി. അനന്തരം പ്രിയതമകളെ അതിദിവ്യമായ മഹാരാസലീലയാൽ ആനന്ദിപ്പിക്കണമെന്നു് പ്രഭു സങ്കല്പിച്ചു. തന്തിരുവടി ശതകോടി ഗോപികകളുടെ മണ്ഡല മദ്ധ്യത്തിൽ ശ്രീ രാധികാസഹിതനായി മേലവും മിന്നലും ചേർന്നതുപോലെ പ്രശോഭിച്ചു. കൂടാതെ, തന്തിരുവടിയുടെ യോഗമായാവൈഭവത്താൽ ഓരോ ഗോപികയുടേയും പാർശ്വത്തിൽ ഓരോ കൃഷ്ണൻ നിൽക്കുന്നതായി കാണപ്പെട്ടു. ഭഗവാൻ ഓരോ ഗോപികയുടേയും കണ്ഠത്തിൽ തൂക്കവെച്ചു് ആശ്ലേഷം ചെയ്തു. തന്നെയാണു് പ്രിയൻ ആലിംഗനം ചെയ്യുന്നതെന്നെന്നു് ഓരോ ഗോപിയും വിചാരിച്ചു. ശ്രീഭഗവാന്റെ പരമധാമായ ഗോലോകത്തിൽ മാത്രം നിത്യസംഭവമായ ആ അദ്ഭുതലീലയെ കണ്ടാനന്ദിക്കുവാൻ ദേവന്മാർ സഭാര്യരായി വിമാനങ്ങളിൽ വന്നു് ആകാശം നിറഞ്ഞു നിന്നു. അവർ ദുന്ദുഭി മുഴക്കി പുഷ്പവൃഷ്ടിചെയ്തു. ഗന്ധർവ്വന്മാർ ഗാനം ചെയ്തു.
+
+പ്രിയതമനോടുചേർന്നു് ഗോപരമണികളുടെ വളകളും നൂപുരങ്ങളും കിങ്ങിണികളും ശബ്ദിച്ചു് രാസമണ്ഡലത്തെ മുഖരിതമാക്കി. ഗോപിമാധവന്മാരാൽ നിറഞ്ഞ ആ അന്തരംഗരംഗത്തെ നോക്കിയ ദേവന്മാർക്കു് ഈരണ്ടു കനകമണികളുടെ നടുവിൽ ഓരോ മരതകമണിരത്നം കോർത്തതുപോലെ തോന്നി. അനന്തരം മഹാരാസ സമാരംഭിച്ചു. താളത്തിനൊത്ത പാദന്യാസങ്ങളോടും ഹസ്തചലനങ്ങളോടും മോഹനസ്മിതത്തോടും ഭ്രൂചലനങ്ങളോടും ഇളകുന്ന കചങ്ങളോടും ആടുന്ന കുണ്ഡലങ്ങളോടും വിയർപ്പു പൊടിഞ്ഞ മുഖമണ്ഡലങ്ങളോടും മുറുക്കിക്കെട്ടിയ കേശഭാരങ്ങളോടും കൂടി കൃഷ്ണ സങ്കീർത്തനം ചെയ്യുന്ന ഗോപികമാർ മേഘമദ്ധ്യത്തിൽ മിന്നലുകളെന്നപോലെ പരിശോഭിച്ചു. ശ്രീകൃഷ്ണ സ്പർശത്താൽ പുളകമണിഞ്ഞ ആ തരുണീമണികൾ മാരോത്തത്തം ഓരോ രാഗം സൃഷ്ടിച്ചു് ശ്രുതിമധുരമായി ആലാപനം ചെയ്തു. അന്നവർ പാടിയ നാനാരാഗങ്ങളാണു് ഇന്നു് സംഗീതലോകത്തെ അലങ്കരിക്കുന്നതു്. ഓരോ ഗോപിയും തന്റെ ഗാനത്തിൽ അതിവിദഗ്ദ്ധമായ പാടവം കാണിച്ചു് മുകുന്ദന്റെ അഭിനന്ദനം സമ്പാദിച്ചു.
+
+ഗോപികമാർ പ്രേമാവേശത്തോടുകൂടി ഗാനവും നൃത്തവും ചെയ്തു് ക്ഷീണിച്ചു. ഒരു ഗോപിയുടെ വളകരം ഊരി വീണു. കേശബന്ധമഴിഞ്ഞു് മല്ലികപ്പൂക്കളുതിർന്നു വീണു. അവൾ മുരളീധരന്റെ തോളിൽ മുഖം ചേർത്തുവച്ചു് വിശ്രമിച്ചു. ഒരു ഗോപി തന്റെ കണ്ഠത്തിൽ വയ്ക്കപ്പെട്ട പ്രിയതമന്റെ സുരഭിലവും ചന്ദനലിപ്തവുമായ ശ്രീകരത്തെ ഘ്രാണിച്ചു് ആനന്ദരോമാഞ്ചത്തോടുകൂടി ചുംബിച്ചു. ഒരു സുന്ദരി ആലസ്യം നടിച്ചു് പ്രാണപ്രിയന്റെ ശ്രീമുഖത്തോട് മുഖം ചേർത്തു നിന്നു. പ്രിയയോടുള്ള വാത്സല്യാധികൃതാൽ ഭഗവാൻ തന്റെ താംബൂലചർവ്വിതത്തെ ദാനം ചെയ്തു. ഒരു ഗോപി നൂപുരമേഖലകളെ ശബ്ദിപ്പിച്ചു് കൊണ്ടു് നൃത്തം ചെയ്തു. ഉച്ചത്തിൽ ഗാനം ചെയ്തു് പാർശ്വസ്ഥനായ അച്യുതനെ സന്തോഷിപ്പിച്ചു. ഒടുവിൽ ക്ഷീണിതയായിട്ടു് പ്രിയന്റെ കരാംബുജത്തെ ഗ്രഹിച്ചു് തന്റെ മാറിടത്തിൽ വച്ചു് നിർവൃതിയായി. ഇപ്രകാരം തങ്ങളുടെ പ്രേമസർവ്വസ്വത്തെ സർവ്വസ്വാധീനമായി ലഭിച്ച ഗോപരമണികൾ കാന്തന്റെ ആലിംഗന സുഖത്തിൽ മതിമറന്നു് ആടിയും പാടിയും പ്രേമാനന്ദസമുദ്രത്തിൽ ആറാടി. ഗോപികമാരുടെ നൃത്തത്തിനനുസരിച്ചു് ഗീതവാദ്യങ്ങളെ മുഴക്കിയ ഗന്ധർവ്വാദികളും തളർന്നു. അപ്പോൾ ഗോപികമാരുടെ കേശത്തിൽ നിന്നു് ഉതിർന്ന പുഷ്പങ്ങളെ ചുററിപ്പറന്ന ഭ്രമരങ്ങൾ ഗാനം ഏററെടുത്തു. ഗോപികമാരുടെ ഇളകുന്ന കൈവളകളും കാൽച്ചിലമ്പുകളും അരമണികളും വാദ്യങ്ങളെന്ന പോലെ മുഴങ്ങി. ഇപ്രകാരം ശ്രീകാന്തനായ പ്രഭു തന്റെ പ്രേയസികളെ ആലിംഗനം, ചുംബനം, കരാടിമർശനം, അനുരാഗകടാക്ഷം ഇത്യാദികളാൽ അവരുടെ മനോരഥങ്ങളെല്ലാം സാധിപ്പിച്ചു് രമിപ്പിച്ചു. ആ പ്രേമദേവതകൾ അത്യാനന്ദപരവശകളായി വീണു. സർവ്വേന്ദ്രിയങ്ങളും തളർന്നു വശായി. മാലകളും ആഭരണങ്ങളും വസ്ത്രങ്ങളും സ്ഥാനങ്ങളിൽ നിന്നും ചലിച്ചു വീണതു് അവരറിഞ്ഞില്ല. അവർ തങ്ങളെത്തന്നെ മറന്നു പ്രേഷ്ഠനിൽ ലയിച്ചു നിന്നു പോയി. എന്നാൽ ഭഗവാനോ, രത്നബാലൻ കണ്ണാടിയിൽ കാണുന്ന പ്രതിബിംബത്തിനോടെന്നപോലെ, ഗോപികമാരിലും അന്തര്യാമിയായി പ്രകാശിക്കുന്ന തന്നോടു കൂടിത്തന്നെയാണു് രമിച്ചതു്. അത്യദ്ഭുതകരവും ആഗ്രഹ്യവുമായ ആ ദിവ്യപ്രതിഭാസത്തെ നോക്കിനിന്ന വേദമൂർത്തി സമൂഹങ്ങൾ ആശ്ചര്യത്താൽ മോഹിച്ചു പോയി. ചന്ദ്രനും നക്ഷത്രങ്ങളും അനാദ്യമായി ചലനമററു് സ്തംഭിച്ചു നിന്നു പോയി. അതിനാൽ ആ രാത്രി അതിദീർഘമായി — ബ്രഹ്മരാത്രിയായി — ഭവിച്ചു.
+
+ഭക്തവത്സലനായ ഭഗവാൻ തന്നിൽ പ്രാണാർപ്പണം ചെയ്ത ആ രമണികളെ വീണ്ടും ആനന്ദിപ്പിക്കുവാനുള്ള കാരുണ്യത്താൽ, ഗോപികമാരെത്രപേരുണ്ടോ അത്രയും സ്വരൂപങ്ങൾ ധരിച്ചു് അവരോടു ചേർന്നു നികുഞ്ജങ്ങളിൽ ക്രീഡിച്ചു. ഒടുവിൽ ക്ഷീണിച്ചു തളർന്ന അവരെ സുഖശീതളമായ അളകകരത്താൽ തലോടി തുളർത്തിച്ചു് അത്യധികം ആനന്ദിപ്പിച്ചു. അവസാനമായി ആ ദിവ്യസംഘം യമുനയിലിറങ്ങി പരസ്പരം ജലപരിഷേചനം ചെയ്തും കളിച്ചും വിഹരിച്ചു. സകല ഗോപികമാരും പ്രിയതമനോടുകൂടി പിന്നീടു് കരയ്ക്കു കയറി നദീതീരത്തുള്ള ഉപവനങ്ങളിൽ വിഹരിച്ചു. ഈവിധം അസാധാരണ ലീലകളാൽ പ്രിയതമകളെ അവരുടെ പ്രതീക്ഷയിലും എത്രയോ അധികമായി ആനന്ദിപ്പിച്ചതു കണ്ടുനിന്ന ദേവന്മാർ പുഷ്പവർഷം ചെയ്തു് സർവ്വേശ്വരന്റെ ഭക്തവാത്സല്യത്തെ വാഴ്ത്തിസ്തുതിച്ചു. ചന്ദ്രികയുള്ള ശരത്കാല രാത്രികളിലെല്ലാം ഇതാവർത്തിക്കപ്പെട്ടു.
+
+കരുണാസമുദ്രമായ ശ്രീകൃഷ്ണൻ ഈ ദിവ്യലീലയെ ചെയ്തതു് തന്റെ ഏകാന്തഭക്തകളും അനന്യശരണകളുമായ സതികളെ സന്തോഷിപ്പിക്കാൻ മാത്രമായിരുന്നു. ആ നിഷ്കളമാനസകരെ സന്തോഷിപ്പിച്ചപ്പോൾ പ്രഭു ചരിതാർത്ഥനായി. ശ്രീ ഭഗവാൻ സ്വസ്വതന്ത്രനാണു്, ആനന്ദസ്വരൂപനാണു്. ആത്മാരാമനും ആപ്തകാമനുമാണു്. അച്യുതന്റെ ആ അവസ്ഥയ്ക്കു് ഒരു കാരണവശാലും കൂടുതൽ കുറവില്ല. ശതകോടി സുന്ദരിമാരോടുചേർന്നു് ശരത്കാലത്തിലെ അനേകം നീണ്ട ബ്രഹ്മരാത്രികളിൽ ക്രീഡിച്ചു് അവരെ ആനന്ദസാഗരത്തിലാറാട്ടിച്ച ഭഗവാൻ പുരുഷോത്തമൻ, സ്വയം ആത്മാരാമനായിരുന്നുകൊണ്ടാണു് അവരെ രമിപ്പിച്ചു്. അതിനാൽ രാസലീല തികച്ചും അപ്രാകൃതവും പരിശുദ്ധവും ദിവ്യവുമായിരുന്നു എന്നു ശ്രോതാക്കളായ ഭക്തന്മാർ സ്മരിച്ചു് ഹൃദയശുദ്ധിവരുത്തിക്കൊള്ളേണ്ടതാണു്.
+
+ശ്രീ ഭഗവാന്റെ രാസലീലാരഹസ്യം ഈവിധം അറിയുവാനുള്ള ചിത്തശുദ്ധിയും ഭഗവത്കൃപയും പരീക്ഷിത്തു മഹാരാജാവിനുണ്ടായിരുന്നു. അത്രതന്നെ പാകതവരത്തവർക്കും കല്ബുദ്ധികളായ ദോഷദൃക്കുകൾക്കും ഉണ്ടാകാവുന്ന സംശയം തീർന്നു തത്വബോധമുണ്ടാകട്ടെ എന്നുള്ള സത് ബുദ്ധിയോടുകൂടി രാജാവു ചോദിച്ചു:— ബ്രഹ്മൻ! ജഗദീശ്വരന്റെ അവതാരം അധർമ്മനാശത്തിനും ധർമ്മസ്ഥാപനത്തിനും വേണ്ടിയായിരുന്നല്ലോ. ധർമ്മത്തിന്റെ ഉപദേശവും അനുഷ്ഠാനവും രക്ഷിതാവുമായ ശ്രീകൃഷ്ണൻ പരസ്ത്രീസംഗമമെന്ന വിപരീതധർമ്മത്തെ എന്തിനുവേണ്ടി ചെയ്തു? ശ്രീ ഭഗവാന്റെ ലീലകൾ ഒരിക്കലും ധർമ്മവിരുദ്ധമായി വരികയില്ല. അതിനാൽ ഇതിന്റെ രഹസ്യം വെളിവാക്കി സംശയം തീർത്തുതരേണമേ.’
+
+അനധികാരികളായ വിഷയികൾക്കുണ്ടാകാവുന്ന ഈ സംശയം തീർക്കാനായി ശ്രീ ശുകൻ അരുളിച്ചെയ്തു:— ലോകനാഥന്മാരായ ഈശ്വരന്മാർ നമ്മെപ്പോലെ കർമ്മബദ്ധരല്ല. മഹാതേജസ്വികളായ അവരെ ഒരു കർമ്മവും സ്പർശിക്കുന്നില്ല. അഗ്നിയിൽ നികൃഷ്ട സാധനങ്ങൾ പതിച്ചാലും ദഹിച്ചുപോകുന്നതല്ലാതെ, അവയ്ക്കു് അഗ്നിയെ അശുദ്ധമാക്കാൻ കഴിയുന്നതല്ലല്ലോ. അതുപോലെ സർവ്വേശ്വരന്റെ ഒരു കർമ്മവും കളങ്കപ്പെടുത്തുന്നില്ല. അവതാരമുക്തികം ചെയ്യുന്നതെല്ലാം ലീലകൾ മാത്രമാണു്, അവയെല്ലാം ലോകസംഗ്രഹത്തിനായിട്ടും ഭവിക്കുന്നു. ആ ലീലകൾകൊണ്ടു് ഈശ്വരനു ലാഭനഷ്ടങ്ങളുമില്ല. ദേഹാഭിമാനികളുടെ ദൃഷ്ടിയിൽ ചിലവ അധർമ്മമാണോ എന്നു തോന്നുന്നതു് ഈശ്വരലീലകളുടെ രഹസ്യതത്വം അറിയുവാൻ കഴിയാത്തതുകൊണ്ടാണു്. ഈശ്വര സാക്ഷാത്കാരം സിദ്ധിച്ച മഹാത്മാക്കൾക്കുപോലും പുണ്യപാപ സംബന്ധമില്ലെന്നിരിക്കെ, സർവ്വലോകനിയാമാകാമായ ഭഗവാനു് ഉണ്ടാകുമോ, ഒരിക്കലുമില്ല. എന്നാൽ അവർ ചെയ്യുന്നതുപോലെയെല്ലാം ചെയ്യാൻ വിഷയാസക്തനായ ദേഹാഭിമാനി പുറപ്പെട്ടാൽ അധഃപതനമായിരിക്കും ഫലം. ശ്രീശിവൻ കാളകൂടവിഷം സേവിച്ചു. സാധാരണക്കാരൻ അതുപോലെ ചെയ്താൽ ഉടൻ മരിക്കും. ഈശ്വരന്മാരുടെ വാക്ക് എപ്പോഴും സത്യപ്രമാണമാണു്. ആ വാക്കിനനുസരിച്ച പ്രവൃത്തിയെ മാത്രം ബുദ്ധിമാൻ അനുസരിക്കണം. എന്നാൽ ശ്രേയസ്സുണ്ടാകും.
+
+ശ്രീഭഗവാനിൽ പരദാരാഭിമർശനമെന്ന ദോഷമാണല്ലോ അങ്ങു് ശങ്കിച്ചതു്. ഭഗവാനു ഗോപികമാർ പരദാരങ്ങളാണോ? പുരുഷനും സ്ത്രീയുംപെട്ട സകല ശരീരങ്ങളിലും അന്തര്യാമിയായിനിന്നു് ചേഷ്ടിപ്പിക്കുന്ന പരമാത്മാവാണു് സാക്ഷാത് ശ്രീകൃഷ്ണൻ. അതിനാൽ സ്ത്രീപുരുഷലോകത്തെയെല്ലാം രക്ഷിക്കുന്ന ഭർത്താവാണു് ഭഗവാൻ. ചരാചരങ്ങളുടേയും ഉള്ളും പുറവും നിറഞ്ഞിരിക്കുന്ന സർവ്വേശ്വരനിൽ നിന്നു് അന്യമായി ഒരു സ്ത്രീയോ പുരുഷനോ ഇല്ല. ആ ഭഗവാൻ അവതരിച്ചു് ലീലകൾ ചെയ്യുന്നുവെങ്കിൽ അതു് താൻ തന്നോടുകൂടി ചെയ്യുന്നതുമാത്രമാണു്. സമുദ്രത്തിൽ എണ്ണമററ തിരകളും നീർക്കുമിളകളും കാണാം. അവ ഒന്നിനൊന്നു വേറെതന്നെ. എന്നാൽ സമുദ്രത്തെ സംബന്ധിച്ചു് അവ വേറെയല്ലല്ലോ. അതുപോലെ സർവ്വാത്മാവായ ഭഗവാനു് ഗോപികമാർ പരദാരങ്ങളേയല്ല. തന്നെ സർവ്വാത്മനാ ശരണം പ്രാപിച്ച ആ പ്രേമമയികളെ ഭക്തവത്സലൻ വഴിപോലെ അനുഗ്രഹിക്കുകയാണു് ചെയ്തതു്. ഗോലോകനാഥൻ ഭൂലോകദുർലഭമായ ഈ ദിവ്യലീലാ വിനോദത്തിലേർപ്പെട്ടതു് സർവ്വഭൂതങ്ങളേയും അനുഗ്രഹിക്കാനാണു്. ശ്രീഭഗവാനിൽ ചിത്തമുറച്ചാൽ മാത്രമല്ലേ ജീവനാകും ശ്രേയസ്സുണ്ടാവുകയുള്ളു. അതിനായി തന്തിരുവടി ഓരോ പ്രകാരത്തിൽ അവരെ തന്നിലേക്കാകർഷിക്കുന്നു. നിഷ്കാമകർമ്മം ചെയ്യിച്ചും, കർമ്മികളേയും, ജ്ഞാനോപദേശം കൊടുത്തു് നിർഗ്ഗുണോപാസകരേയും, ബഹുവിധ ലീലകളെക്കൊണ്ടു് ഭക്തന്മാരേയും പ്രഭു തന്നിലേക്കാകർഷിക്കുന്നു. അതുപോലെ ശൃംഗാര രസികരായ വിഷയികളേയും തന്നിലേക്കാകർഷിക്കാനും കൂടിയാണു് ഭഗവാൻ രാസലീലാ നാടകം നടത്തിയതു്.
+
+പിന്നെ ഒരു രഹസ്യംകൂടി ധരിച്ചാലും. ഗോപികമാരുടെ പഞ്ചഭൂതാത്മകമായ ശരീരങ്ങൾ ഭഗവാനെ സമീപിച്ചതേയില്ല. കൃഷ്ണപ്രാണമയികളായ അവർ വേണുഗാനശ്രവണ മാത്രത്താൽ കൃഷ്ണഭാവവിഷ്ടകളായി വീണിട്ടു് ഭാവശരീരങ്ങളോടുകൂടിയാണു് പ്രഭുവിന്റെയടുത്തെത്തിയതു്. അവരതറിഞ്ഞില്ല. ഭാവശരീരങ്ങൾക്കു് മാംസശരീരങ്ങൾക്കുള്ള ലൈംഗികവികാരങ്ങൾ ഒരിക്കലും സംഭാവ്യമല്ല. ചിന്മയനായ ഗോവിന്ദന്റെ സംഗത്താൽ അവർ വിഷയാനന്ദമല്ല, ദിവ്യപ്രേമാനന്ദമാണനുഭവിച്ചതു്. അവരുടെ പഞ്ചഭൂതശരീരങ്ങൾ ഗൃഹങ്ങളിൽ തന്നെയുണ്ടായിരുന്നു. അവരുടെ പുരുഷന്മാർ അവരെ എല്ലാ രാത്രികളിലും സമീപത്തു തന്നെ കണ്ടിരുന്നു. ഭാവശരീരികം ഭഗവാൻ തന്നെയാണു്. അതുകൊണ്ടാണു് ബാലൻ സ്വപ്രതിബിംബങ്ങളോടുകൂടി കളിക്കുന്നതു പോലെയാണു് ഭഗവാൻ ഗോപികമാരോടുകൂടി ക്രീഡിച്ചതെന്നു മുമ്പു പറഞ്ഞതു്. ഓരോ രാത്രിയുടെ അവസാനത്തിലും ബ്രഹ്മമുഹൂർത്തത്തിൽ ഗോപികമാർ മനസ്സില്ലാമനസ്സോടെ ഭഗവദ്ദർശനത്താൽ ഗൃഹങ്ങളിലേക്കു മടങ്ങിപ്പോയി. പകൽ വ്രജത്തിലിരുന്നാലും അവർ രമണനെ ഒരക്ഷണവും പിരിയാതെ ഹൃദയത്തിൽ കണ്ടുകൊണ്ടിരുന്നു.
+
+അല്ലയോ രാജർഷേ! ഭഗവത്പ്രേമം സ്വരൂപമെടുത്ത ഗോപരമണികളോടു ചേർന്നു് വ്രജരാജകുമാരൻ നടത്തിയ അത്യദ്ഭുതകരവും അതിദിവ്യവുമായ രാസലീലയെ അത്യന്തം ഹൃദയശുദ്ധിയോടും ഭക്തിശ്രദ്ധയോടും സമ്പൂർണ്ണശരണാഗതിയോടും കൂടി കേൾക്കേണ്ടതും കേൾപ്പിക്കേണ്ടതുമാണു്. എന്നാൽ മാത്രമേ അതിന്റെ തത്വം ശരിയായി ഗ്രഹിക്കാനും, കോടിജന്മങ്ങളിലായി ഹൃദയത്തിൽ മാറാരോഗമായി ഉറച്ചു വേരൂന്നിയ കാമത്തെ നിശ്ശേഷമുപേക്ഷിക്കുവാനും മുകുന്ദ പാദാരവിന്ദങ്ങൾ ഉള്ളിൽ പ്രകാശിക്കുവാനും കഴിയുകയുള്ളു.
+
+ശതകോടി ഗോപികമാരുമായി അനേക രാത്രികളിൽ ക്രീഡിച്ചിട്ടും 'അവരോധസൗരതനായിരുന്ന' ഹൃഷീകേശനായ മന്മഥമന്മഥന്റെ 'കാമവിജയ'മെന്ന ലീലയാണു് രാസപഞ്ചാദ്ധ്യായിയിൽ ശ്രീശുകനുപദേശിച്ചതു്. കാമഗന്ധലേശം പോലും സ്പർശിക്കാത്ത ഉത്കൃഷ്ടപ്രേമഭക്തിയുടെ സ്വഭാവത്തെ ലോകത്തിനു എടുത്തുകാട്ടിയ അഭിനന്ദഗോപികമാരുടെ മഹാഭാവപ്രകടനമാണു് രാസലീല. ജന്മനാ ജീവന്മുക്തനും നൈഷ്ഠികബ്രഹ്മചാരിയും മുനികൾക്കെല്ലാം ഗുരുവുമായ ശ്രീബാദരായണി ഉത്ഘോഷിച്ച മഹാവാണിയാണു് രാസലീല. മൂന്നുദിവസം കഴിഞ്ഞു് മരിക്കുമെന്ന ബോധത്തോടുകൂടി പ്രായോപവേശം ചെയ്തിരുന്ന രാജർഷി പരീക്ഷിത്തും ലോകവന്ദ്യരായ ബ്രഹ്മർഷി ദേവർഷി രാജർഷി സത്തമന്മാരും ഭക്ത്യാദരപൂർവ്വം ശ്രവണം ചെയ്തതാണു് രാസലീല. ആ മഹാവാണി ആ കല്പകാലം അന്തരീക്ഷത്തിൽ മുഴങ്ങിക്കൊണ്ടിരിക്കും. അതുകേട്ടാൽ മാത്രമെ കാമമാകുന്ന ഹൃദ് രോഗം ശമിക്കുകയുള്ളു. ആ ഭാഗ്യം സിദ്ധിച്ചു് നാമെല്ലാം കൃഷ്ണപ്രേമികളായിത്തീരാനും, ശ്രീരാധാകൃഷ്ണയുഗളമൂർത്തിയുടെ അനുഗ്രഹത്തിനു പാത്രമാകുവാനും സദ് ഗുരുകൃപാദൃഷ്ടി നമ്മിൽ പതിയുമാറാകട്ടെ.
+</file>
+
+<file path=".gitignore">
+node_modules
+.next
+out
+.vercel
+.env*
+.DS_Store
+*.log
+</file>
+
+<file path="eslint.config.mjs">
+import { defineConfig, globalIgnores } from "eslint/config";
+import nextVitals from "eslint-config-next/core-web-vitals";
+import nextTs from "eslint-config-next/typescript";
+
+export default defineConfig([
+  ...nextVitals,
+  ...nextTs,
+  globalIgnores([".next/**", "out/**", "build/**", "next-env.d.ts"]),
+]);
+</file>
+
+<file path="next-env.d.ts">
+/// <reference types="next" />
+/// <reference types="next/image-types/global" />
+/// <reference path="./.next/types/routes.d.ts" />
+
+// NOTE: This file should not be edited
+// see https://nextjs.org/docs/app/api-reference/config/typescript for more information.
+</file>
+
+<file path="next.config.ts">
+import type { NextConfig } from "next";
+
+const nextConfig: NextConfig = {
+  poweredByHeader: false,
+  compress: true,
+  reactStrictMode: true,
+};
+
+export default nextConfig;
+</file>
+
+<file path="package.json">
+{
+  "name": "rasa-panchadyayi-reader",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint ."
+  },
+  "dependencies": {
+    "next": "^15.5.6",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.30",
+    "@types/react": "^19.1.8",
+    "@types/react-dom": "^19.1.7",
+    "eslint": "^9.34.0",
+    "eslint-config-next": "^15.5.6",
+    "typescript": "^5.9.2"
+  }
+}
+</file>
+
+<file path="README.md">
+# Rasa Panchadyayi — Next.js reader
+
+A responsive, server-rendered reading experience for the supplied Malayalam Rasa Panchadyayi text.
+
+## Stack
+
+- Next.js App Router + TypeScript
+- React 19
+- `@/*` import alias mapped to `src/*`
+- Server-rendered manuscript content for crawlability
+- Google Translate website widget for visitor-selected translations
+- No paid API, database, authentication, or runtime backend
+
+## Run locally
+
+Requires Node.js 20.9+.
+
+```bash
+npm install
+npm run dev
+```
+
+Open http://localhost:3000.
+
+Create a production build:
+
+```bash
+npm run build
+npm run start
+```
+
+## Deploy to Vercel
+
+1. Push this folder to a Git repository.
+2. Import the repository in Vercel.
+3. Use the default Next.js framework settings.
+4. Add `NEXT_PUBLIC_SITE_URL` with your real production URL, for example `https://your-domain.vercel.app`.
+5. Deploy.
+
+No paid services or environment secrets are required. Vercel's free Hobby tier is subject to its current usage limits and terms.
+
+## Translation behavior — important
+
+The Malayalam manuscript is rendered on the server and remains the canonical source. The language selector invokes Google's free website translation widget for supported languages; no paid translation API key is used.
+
+- Translations are machine-generated by Google at visitor request, not human-reviewed.
+- The availability and language coverage of the third-party widget are controlled by Google and may change. Some less widely supported Indian languages may not be available through the widget even though they appear in the language menu.
+- The translated page is not a separately authored/indexable language edition. Search engines receive the original Malayalam content.
+- Selecting Malayalam reloads the canonical source if the widget cannot restore it.
+- The app does not store or overwrite the original manuscript.
+
+For publication-grade translations, use reviewed translation files per language and render each language as its own server-rendered route. This project intentionally does not fabricate translations or silently replace sacred source text with unverified wording.
+
+## Source text integrity
+
+The supplied file is included at:
+
+`src/content/rasa-panchadyayi.txt`
+
+It is copied from the uploaded TXT source without editorial correction, cleanup, truncation, or translation. The full source is loaded by the server component and displayed as pre-wrapped text.
+
+## SEO and performance notes
+
+Included:
+- Server-rendered article text
+- Metadata, canonical URL, Open Graph and Twitter metadata
+- Article JSON-LD structured data
+- `robots.txt` and `sitemap.xml` routes
+- Responsive layout and readable Malayalam typography
+- No heavy UI framework or animation library
+- Reduced-motion support and no scroll locking
+- Compressed production responses
+
+Before launch, set `NEXT_PUBLIC_SITE_URL` to the canonical domain and verify the deployed site with Google Search Console, Lighthouse, and GTmetrix. No implementation can guarantee an A grade or search ranking across every network, device, and third-party dependency. Google Fonts and Google Translate load externally and can affect lab scores.
+</file>
+
+<file path="repomix.config.json">
+{
+  "output": {
+    "filePath": "repomix-output.txt",
+    "style": "xml"
+  },
+  "ignore": {
+    "useGitignore": false,
+    "useDefaultPatterns": false,
+    "customPatterns": [
+      "**/node_modules/**",
+      "**/.next/**",
+      "**/dist/**",
+      "**/build/**",
+      "**/*.lock",
+      "**/package-lock.json",
+      "**/pnpm-lock.yaml"
+    ]
+  }
+}
+</file>
+
+<file path="SOURCE-NOTE.txt">
+The file src/content/rasa-panchadyayi.txt is copied from the user-provided upload 'Rasa Panchadyayi-Bagavatham-Malayalam.txt'. It is retained as supplied; no editorial corrections or content omissions were intentionally made.
+</file>
+
+<file path="tsconfig.json">
+{
+  "compilerOptions": {
+    "target": "ES2017",
+    "lib": ["dom", "dom.iterable", "esnext"],
+    "allowJs": false,
+    "skipLibCheck": true,
+    "strict": true,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "jsx": "preserve",
+    "incremental": true,
+    "plugins": [{ "name": "next" }],
+    "paths": { "@/*": ["./src/*"] }
+  },
+  "include": ["next-env.d.ts", ".next/types/**/*.ts", ".next/dev/types/**/*.ts", "**/*.ts", "**/*.tsx"],
+  "exclude": ["node_modules"]
+}
+</file>
+
+</files>

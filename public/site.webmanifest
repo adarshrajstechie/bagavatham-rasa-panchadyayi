@@ -1,0 +1,9 @@
+{
+  "name": "Rasa Panchadyayi",
+  "short_name": "Rasa",
+  "description": "A Malayalam reader for the Rasa Panchadyayi.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#fbfaf6",
+  "theme_color": "#101b1a"
+}
